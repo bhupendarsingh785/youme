@@ -1,0 +1,13 @@
+{
+  "name": "youme",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "YouMe — social app (feed, reels, DM) with zero-dependency Node + SQLite backend",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\""
+  }
+}
