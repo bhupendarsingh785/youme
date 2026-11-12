@@ -1639,6 +1639,17 @@ $("emGo").onclick = async () => {
 };
 $("emCode").onkeydown = (e) => { if (e.key === "Enter") $("emGo").click(); };
 
+/* social login se wapas aane par: server cookie lagata hai, hum /api/me le lete hain */
+async function ssoReturn(){
+  const u = new URL(location.href);
+  const err = u.searchParams.get("ym_error") || (u.hash.startsWith("#ym_error=") ? decodeURIComponent(u.hash.slice(10)) : "");
+  if (err){
+    try{ toast(err); }catch(e){}
+    u.searchParams.delete("ym_error");
+    history.replaceState(null, "", u.pathname + (u.search ? u.search : ""));
+  }
+}
+
 (async function boot(){
   // Render free server 15 min baad so jaata hai, jagne me 30-60 sec — tab tak intezaar karo
   let offline = false;
