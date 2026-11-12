@@ -21,6 +21,16 @@ const MAX_BODY = 2 * 1024 * 1024;
 const MAX_IMG = 1_500_000;
 const REPORT_REASONS = ["spam", "abuse", "nudity", "violence", "other"];
 const REPORTS_TO_HIDE = 3;           // itne alag logon ke report par post sabse chhup jaata hai
+/* Username ya email — dono account naam ban sakte hain.
+   Username: 3-20 akshar, a-z 0-9 _
+   Email: kuch@kuch.tld (max 120 akshar) */
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+function isValidHandle(v) {
+  const s2 = String(v || "").trim();
+  if (EMAIL_RE.test(s2) && s2.length <= 120) return true;
+  return /^[A-Za-z0-9_]{3,20}$/.test(s2);
+}
+
 const LOGIN_FAILS = 8;               // ek username par 15 minute me itni galat koshish ke baad rok
 const DUMMY_HASH = hashPassword("dummy-password-for-timing");
 
@@ -206,7 +216,7 @@ export function createApp({
     const b = await readJson(req);
     const username = String(b.username || "").trim();
     const password = checkPassword(b.password);
-    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) throw new HttpError(400, "Username 3-20 akshar: a-z, 0-9, _");
+    if (!isValidHandle(username)) throw new HttpError(400, "Username 3-20 akshar (a-z, 0-9, _) ya email daalo");
     const display = cleanText(b.display, 40) || username;
     if (q.userByName.get(username)) throw new HttpError(409, "Ye username le liya gaya hai");
     const code = makeRecoveryCode();
@@ -401,7 +411,7 @@ export function createApp({
   // ---------- block ----------
   route("GET", /^\/api\/blocks$/, (req) => ({ blocked: q.myBlocks.all(auth(req).id) }));
 
-  route("POST", /^\/api\/users\/([A-Za-z0-9_]{3,20})\/block$/, (req, m) => {
+  route("POST", /^\/api\/users\/([A-Za-z0-9._%+@-]{3,120})\/block$/, (req, m) => {
     const u = auth(req);
     const other = userNamed(m[1]);
     if (other.id === u.id) throw new HttpError(400, "Khud ko block nahi kar sakte");
