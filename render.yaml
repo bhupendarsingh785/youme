@@ -19,3 +19,16 @@ services:
         value: "data/youme.db"
       - key: TRUST_PROXY
         value: "1"
+      # Google login — value Render dashboard me daalni hai (repo me secret nahi)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # GitHub login (baad me)
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      # Public URL — callback banane ke liye
+      - key: PUBLIC_URL
+        sync: false
