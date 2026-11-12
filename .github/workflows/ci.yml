@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,6 +21,10 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      - name: Backup script chalta hai?
+        run: |
+          DB_PATH="$RUNNER_TEMP/smoke.db" node --disable-warning=ExperimentalWarning -e "import('./server/db.js').then(m => m.openDb(process.env.DB_PATH).close())"
+          DB_PATH="$RUNNER_TEMP/smoke.db" npm run -s backup -- "$RUNNER_TEMP/smoke-backup.db"
 
   docker:
     # main par push hone par image banao aur GitHub Container Registry (ghcr.io) par daalo
