@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" id="themeMeta" content="#070a10" />
-<title>YouMe v12</title>
+<title>YouMe</title>
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <style>
@@ -289,6 +289,7 @@
     <div class="pcard">
       <b style="font-size:14px">⚙️ Settings</b>
       <div class="coin"><span>Theme</span><button id="themeBtn" style="background:var(--violet);color:#fff">Auto</button></div>
+      <div class="coin"><span>🤖 AI jawab</span><button id="aiProviderBtn" style="background:var(--card2);color:var(--txt)">phone me hi</button></div>
       <div class="coin"><span>Auto-translate DM</span><button id="trBtn" style="background:var(--card2);color:var(--txt)">on</button></div>
       <div class="coin"><span>Tumhari pasand</span><b id="interests" style="font-size:13px;text-align:right">—</b></div>
       <div class="coin"><span>Algorithm reset</span><button id="algoReset" style="background:var(--card2);color:var(--txt)">reset</button></div>
@@ -720,400 +721,61 @@ $("chatSend").onclick = () => {
 
 
 /* ---------- YouMe AI (apna, kisi doosre system se nahi) ---------- */
+/* ---------- AI provider (Bharat / free / band) ----------
+   default "local" = kuch bahar nahi jata, phone me hi jawab.
+   "sarvam" = Sarvam AI (Bharat ki company, data Bharat me) — apni key.
+   "free"   = pollinations.ai (bahar jata hai) — sirf tumhare chahne par. */
+function aiCfg(){
+  try{ return JSON.parse(localStorage.getItem("ym.ai") || "null") || { provider: "local", key: "" }; }
+  catch(e){ return { provider: "local", key: "" }; }
+}
+function setAiCfg(c){ try{ localStorage.setItem("ym.ai", JSON.stringify(c)); }catch(e){} }
+
 async function youmeAsk(prompt){
-  const url = "https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai";
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 25000);
-  try{
-    const r = await fetch(url, { signal: ctrl.signal });
-    if (!r.ok) throw new Error("http " + r.status);
-    const txt = await r.text();
-    return txt && txt.trim().length > 1 ? txt.trim() : "";
-  }catch(e){ return ""; }
-  finally{ clearTimeout(t); }
-}
-
-const YOUME_PROMPT = "Tum YouMe ho — ek dosti wali app. Hinglish (Roman Hindi) me 2-3 line ka pyaar bhara jawab do, aakhir me ek chhota sawal. Sach bolo.";
-
-async function smartReply(text){
-  try{
-    const a = await youmeAsk(YOUME_PROMPT + "\n\nSwag: " + text);
-    if (a && a.length > 1) return String(a).trim().slice(0, 400);
-  }catch(e){}
-  return autoReply(text);
-}
-
-function autoReply(t){
-  const x = t.toLowerCase();
-  if (/kaise|haal/.test(x)) return "Main theek hoon. Tum batao?";
-  if (/market|nifty/.test(x)) return "Nifty abhi WAIT par hai. Trader tab me detail hai.";
-  if (/kya kar/.test(x)) return "Main feed, reels, DM aur wallet sambhalti hoon.";
-  return "Samajh gayi. (Demo jawab — asli AI key jodne par aayega.)";
-}
-
-
-/* ================= STORIES viewer ================= */
-const STORY_DATA = [
-  { n:"Riya", a:"🌸", items:[ {c:"🌸", cap:"Subah ki pehli clip"},{c:"🎬", cap:"Naya reel"},{c:"✨", cap:"Filtter try karo"} ] },
-  { n:"Swag", a:"🧑", items:[ {c:"🎬", cap:"Naya reel banaya"},{c:"🌄", cap:"Subah ki thandi hawa"} ] },
-  { n:"Suno", a:"🎙️", items:[ {c:"🎙️", cap:"Bolo, sun rahi hoon"} ] },
-];
-let sIdx = 0, sItem = 0, sTimer = null;
-
-document.addEventListener("click", (e) => {
-  const st = e.target.closest(".story");
-  if (st && !st.classList.contains("add")){
-    const i = [...document.querySelectorAll(".story")].indexOf(st);
-    openStory(Math.max(0, i - 1));   // pehla 'Tum' add-story hai
-  }
-});
-
-function openStory(i){
-  sIdx = i; sItem = 0;
-  go("story");
-  paintStory();
-}
-function paintStory(){
-  const s = STORY_DATA[sIdx];
-  if (!s){ closeStory(); return; }
-  $("storyAv").textContent = s.a;
-  $("storyName").textContent = s.n;
-  $("storyBars").innerHTML = s.items.map((_, k) =>
-    `<div style="flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.28);overflow:hidden">
-       <div style="height:100%;width:${k < sItem ? 100 : 0}%;background:#fff;transition:width 3s linear" data-bar="${k}"></div>
-     </div>`).join("");
-
-  const it = s.items[sItem] || s.items[0];
-  $("storyBody").textContent = it.c;
-  $("storyCap").textContent = it.cap || "";
-
-  const bar = document.querySelector(`[data-bar="${sItem}"]`);
-  if (bar) requestAnimationFrame(() => { bar.style.width = "100%"; });
-
-  clearTimeout(sTimer);
-  sTimer = setTimeout(() => {
-    sItem++;
-    if (sItem >= s.items.length){ sIdx++; sItem = 0; }
-    if (sIdx >= STORY_DATA.length) closeStory(); else paintStory();
-  }, 3000);
-}
-function closeStory(){ clearTimeout(sTimer); go("home"); }
-$("storyClose").onclick = closeStory;
-
-/* ================= POLL post ================= */
-const _oldMedia = document.querySelectorAll("[data-media]");
-_oldMedia.forEach(b => b.addEventListener("click", () => {
-  $("pollBox").style.display = b.dataset.media === "📊 Poll" ? "block" : "none";
-}));
-
-/* ================= REELS: asli photo + canvas filter ================= */
-const FILTERS = {
-  none:   { b:0, c:1, s:1, h:0 },
-  anime:  { b:8, c:1.25, s:1.9, h:-14 },
-  cyber:  { b:0, c:1.2, s:1.6, h:180 },
-  film:   { b:-6, c:1.12, s:1.05, h:0, sepia:.35 },
-  noir:   { b:0, c:1.3, s:0, h:0 },
-  glow:   { b:12, c:1.05, s:1.15, h:0 },
-  warm:   { b:5, c:1.05, s:1.25, h:0, sepia:.22 },
-  cool:   { b:2, c:1.05, s:1.15, h:-12 },
-  vintage:{ b:5, c:.95, s:1.0, h:0, sepia:.42 },
-  dream:  { b:15, c:.95, s:1.1, h:0 },
-  neon:   { b:0, c:1.35, s:2.4, h:60 },
-  sunset: { b:4, c:1.1, s:1.6, h:-28, sepia:.2 },
-  pastel: { b:18, c:.85, s:.9, h:10 },
-  drama:  { b:-8, c:1.5, s:1.2, h:0 },
-};
-
-document.addEventListener("change", (e) => {
-  if (e.target.id !== "reelImg") return;
-  const f = e.target.files && e.target.files[0];
-  if (!f) return;
-  const url = URL.createObjectURL(f);
-  const reels = document.querySelectorAll(".reel .big");
-  reels.forEach(el => {
-    el.textContent = "";
-    el.style.backgroundImage = `url(${url})`;
-    el.style.backgroundSize = "cover";
-    el.style.backgroundPosition = "center";
-    el.style.width = "100%"; el.style.height = "100%";
-    el.style.fontSize = "0";
-  });
-  applyFilter(currentFilter);
-  toast("Photo lagi — filter try karo"); e.target.remove();
-});
-
-document.addEventListener("click", (e) => {
-  if (!e.target.classList.contains("pickImg")) return;
-  const inp = document.createElement("input");
-  inp.type = "file"; inp.accept = "image/*"; inp.id = "reelImg";
-  inp.style.display = "none";
-  document.body.appendChild(inp);
-  inp.click();
-});
-
-function applyFilter(name){
-  const f = FILTERS[name] || FILTERS.none;
-  const parts = [];
-  if (f.s === 0) parts.push("grayscale(1)"); else parts.push(`saturate(${f.s})`);
-  parts.push(`contrast(${f.c})`);
-  parts.push(`brightness(${1 + f.b/100})`);
-  if (f.h) parts.push(`hue-rotate(${f.h}deg)`);
-  if (f.sepia) parts.push(`sepia(${f.sepia})`);
-  document.querySelectorAll(".reel .big").forEach(el => { el.style.filter = parts.join(" "); });
-}
-
-
-/* ================= LENS: camera + beauty/face filters + stickers ================= */
-const LENS_FILTERS = [
-  { id:"original", name:"Original", css:"" },
-  { id:"glow",     name:"Glow",     css:"brightness(1.12) saturate(1.15) contrast(1.05)" },
-  { id:"soft",     name:"Soft",     css:"brightness(1.08) saturate(1.05) blur(0.4px)" },
-  { id:"warm",     name:"Warm",     css:"sepia(.22) saturate(1.25) brightness(1.05)" },
-  { id:"cool",     name:"Cool",     css:"hue-rotate(-12deg) saturate(1.15) brightness(1.02)" },
-  { id:"vintage",  name:"Vintage",  css:"sepia(.42) contrast(.95) brightness(1.05)" },
-  { id:"noir",     name:"Noir",     css:"grayscale(1) contrast(1.25)" },
-  { id:"cyber",    name:"Cyber",    css:"hue-rotate(190deg) saturate(1.7) contrast(1.15)" },
-  { id:"anime",    name:"Anime",    css:"saturate(1.9) contrast(1.2) brightness(1.05)" },
-  { id:"vhs",      name:"VHS",      css:"contrast(1.2) saturate(1.3) hue-rotate(-8deg) blur(0.3px)" },
-  { id:"duotone",  name:"Duotone",  css:"grayscale(1) sepia(.6) hue-rotate(180deg) saturate(1.8)" },
-  { id:"dream",    name:"Dream",    css:"brightness(1.15) saturate(1.1) blur(0.6px) contrast(.95)" },
-  { id:"neon",     name:"Neon",     css:"saturate(2.4) contrast(1.35) hue-rotate(60deg)" },
-  { id:"sunset",   name:"Sunset",   css:"sepia(.2) saturate(1.6) hue-rotate(-28deg) brightness(1.04) contrast(1.1)" },
-  { id:"pastel",   name:"Pastel",   css:"brightness(1.18) saturate(.9) contrast(.85) hue-rotate(10deg)" },
-  { id:"drama",    name:"Drama",    css:"contrast(1.5) saturate(1.2) brightness(.92)" },
-  { id:"golden",   name:"Golden",   css:"sepia(.35) saturate(1.5) brightness(1.1) hue-rotate(-10deg)" },
-  { id:"mint",     name:"Mint",     css:"hue-rotate(60deg) saturate(1.2) brightness(1.08)" },
-  { id:"rose",     name:"Rose",     css:"hue-rotate(-30deg) saturate(1.3) brightness(1.1) sepia(.12)" },
-  { id:"matrix",   name:"Matrix",   css:"grayscale(1) sepia(1) hue-rotate(70deg) saturate(3) contrast(1.2)" },
-];
-const STICKERS = ["😎","😍","🎉","🔥","💖","🌟","🦋","👑","🎧","🌈","🌸","😂"];
-
-let lensStream = null, lensFilter = LENS_FILTERS[0], lensFacing = "user", activeStickers = [];
-
-function openLens(){
-  go("lens");
-  paintLensBars();
-  startLens();
-  setTimeout(() => { if (typeof startAr === "function") startAr(); }, 400);
-}
-
-function paintLensBars(){
-  $("lensFilters").innerHTML = LENS_FILTERS.map(f =>
-    `<button data-lf="${f.id}" style="flex:0 0 auto;background:${f.id === lensFilter.id ? "var(--violet)" : "rgba(10,15,24,.6)"};
-      border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:12px 18px;font-size:15px;font-family:inherit">${f.name}</button>`).join("");
-  $("lensFilters").querySelectorAll("[data-lf]").forEach(b => b.onclick = () => {
-    lensFilter = LENS_FILTERS.find(f => f.id === b.dataset.lf) || LENS_FILTERS[0];
-    applyLensFilter(); paintLensBars();
-  });
-
-  $("lensStickerBar").innerHTML = STICKERS.map(s2 =>
-    `<button data-st="${s2}" style="flex:0 0 auto;background:rgba(10,15,24,.6);border:1px solid rgba(255,255,255,.2);color:#fff;
-      border-radius:50%;width:54px;height:54px;font-size:26px">${s2}</button>`).join("");
-  $("lensStickerBar").querySelectorAll("[data-st]").forEach(b => b.onclick = () => {
-    activeStickers.push({ ch:b.dataset.st, x:30 + Math.random()*40, y:25 + Math.random()*40, size:46 });
-    paintStickers();
-  });
-}
-
-function applyLensFilter(){ $("lensVideo").style.filter = lensFilter.css || "none"; }
-
-function paintStickers(){
-  $("lensStickers").innerHTML = activeStickers.map((s2, i) =>
-    `<span data-rm="${i}" style="position:absolute;left:${s2.x}%;top:${s2.y}%;font-size:${s2.size}px;pointer-events:auto">${s2.ch}</span>`).join("");
-  $("lensStickers").querySelectorAll("[data-rm]").forEach(el => el.onclick = () => {
-    activeStickers.splice(Number(el.dataset.rm), 1); paintStickers();
-  });
-}
-
-async function startLens(){
-  try{
-    lensStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: lensFacing }, audio: false });
-    $("lensVideo").srcObject = lensStream;
-    applyLensFilter();
-  }catch(e){
-    toast("Camera nahi khula — permission do ya browser check karo");
-  }
-}
-
-function stopLens(){
-  if (lensStream){ lensStream.getTracks().forEach(t => t.stop()); lensStream = null; }
-  activeStickers = []; paintStickers();
-}
-
-$("lensClose").onclick = () => { if (typeof stopAr === "function") stopAr(); stopLens(); go("reels"); };
-$("lensFlip").onclick = async () => {
-  lensFacing = lensFacing === "user" ? "environment" : "user";
-  stopLens(); await startLens();
-};
-
-$("lensShot").onclick = () => {
-  const v = $("lensVideo"), c = $("lensCanvas");
-  if (!v.videoWidth) return toast("Camera taiyar nahi");
-  c.width = v.videoWidth; c.height = v.videoHeight;
-  const ctx = c.getContext("2d");
-  ctx.filter = lensFilter.css || "none";
-  ctx.drawImage(v, 0, 0, c.width, c.height);
-  activeStickers.forEach(s2 => {
-    ctx.filter = "none";
-    ctx.font = `${Math.round(c.width * (s2.size / 300))}px serif`;
-    ctx.fillText(s2.ch, c.width * s2.x / 100, c.height * s2.y / 100);
-  });
-  const data = c.toDataURL("image/jpeg", 0.85);
-  const cap = prompt("Caption likho (khali chhod sakte ho):") || "";
-  posts.unshift({ u:"Swag", a:"🧑", t:"abhi", ts:Date.now(), text: cap || "(lens photo)", media:"", img: data, likes:0 });
-  LS.set("posts", posts);
-  stopLens();
-  paintFeed(); go("home");
-  earn(8); toast("Photo post ho gayi · +8 coins");
-};
-
-/* ---------- advanced share ---------- */
-async function sharePost(i){
-  const p = posts[i]; bump(p.u, 3);
-  const text = `${p.u}: ${p.text}`;
-  try{
-    if (navigator.share){ await navigator.share({ title:"YouMe", text, url: location.href }); return; }
-  }catch(e){}
-  try{ await navigator.clipboard.writeText(text + "\n" + location.href); toast("Copy ho gaya — kahin bhi paste karo"); }
-  catch(e){ toast("Share nahi hua"); }
-}
-
-
-/* ================= AR masks (chehre par) ================= */
-const AR_MASKS = [
-  { id:"none",  name:"Off",       ch:"" },
-  { id:"crown", name:"Crown",     ch:"👑" },
-  { id:"glass", name:"Glasses",   ch:"🕶️" },
-  { id:"dog",   name:"Dog ears",  ch:"🐶" },
-  { id:"bunny", name:"Bunny",     ch:"🐰" },
-  { id:"hearts",name:"Hearts",    ch:"💖" },
-  { id:"halo",  name:"Halo",      ch:"😇" },
-  { id:"fire",  name:"Fire",      ch:"🔥" },
-  { id:"cat",   name:"Cat",       ch:"🐱" },
-  { id:"star",  name:"Star",      ch:"⭐" },
-];
-let arMask = AR_MASKS[0], arRAF = null, arVideo = null;
-
-function paintArBar(){
-  const bar = $("arBar");
-  if (!bar) return;
-  bar.innerHTML = AR_MASKS.map(m =>
-    `<button data-ar="${m.id}" style="flex:0 0 auto;background:${m.id===arMask.id?"var(--violet)":"rgba(10,15,24,.6)"};
-      border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:12px 18px;font-size:15px;font-family:inherit">${m.ch || "🚫"} ${m.name}</button>`).join("");
-  bar.querySelectorAll("[data-ar]").forEach(b => b.onclick = () => {
-    arMask = AR_MASKS.find(m => m.id === b.dataset.ar) || AR_MASKS[0];
-    paintArBar();
-    if (arMask.id === "none") clearAr();
-  });
-}
-
-function clearAr(){ if ($("arLayer")) $("arLayer").innerHTML = ""; }
-
-function arLoop(){
-  const v = $("lensVideo"), layer = $("arLayer");
-  if (!v || !layer) return;
-  const F = window.YM_FACE || {};
-
-  if (!F.ready || !F.mesh){
-    // fallback: chehra na mile to mask upar-center me
-    drawArAt(0.5, 0.28, v.clientWidth || 360);
-  } else if (v.readyState >= 2){
+  const cfg = aiCfg();
+  if (cfg.provider === "sarvam" && cfg.key){
     try{
-      const res = F.mesh.detectForVideo(v, performance.now());
-      const lm = res && res.faceLandmarks && res.faceLandmarks[0];
-      if (lm && lm[10]) drawArAt(lm[10].x, lm[10].y - 0.06, (v.clientWidth || 360));
-      else clearAr();
-    }catch(e){}
+      const r = await fetch("https://api.sarvam.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + cfg.key },
+        body: JSON.stringify({ model: "sarvam-m", messages: [{ role: "user", content: prompt }], max_tokens: 300 }),
+      });
+      if (!r.ok) return "";
+      const d = await r.json();
+      return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || "";
+    }catch(e){ return ""; }
   }
-  arRAF = requestAnimationFrame(arLoop);
-}
-
-function drawArAt(nx, ny, w){
-  const layer = $("arLayer");
-  if (!layer || arMask.id === "none") { if (layer) layer.innerHTML = ""; return; }
-  const size = Math.round(w * 0.22);
-  layer.innerHTML =
-    `<div style="position:absolute;left:${nx*100}%;top:${ny*100}%;transform:translate(-50%,-50%);
-      font-size:${size}px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))">${arMask.ch}</div>`;
-}
-
-function startAr(){
-  stopAr();
-  paintArBar();
-  arLoop();
-}
-function stopAr(){ if (arRAF) cancelAnimationFrame(arRAF); arRAF = null; clearAr(); }
-
-
-/* ================= Thread (X jaisa) ================= */
-let threadIdx = null;
-function openThread(i){
-  threadIdx = i; bump(posts[i].u, 1);
-  paintThread();
-  go("thread");
-}
-function paintThread(){
-  const p = posts[threadIdx];
-  if (!p) return;
-  const replies = p.replies || [];
-  $("threadBody").innerHTML = `
-    <div class="post" style="border:1px solid var(--line);border-radius:14px;margin-bottom:14px">
-      <div class="phead"><div class="av">${p.a}</div><div><b>${esc(p.u)}</b><br><span>${esc(p.ts ? ago(p.ts) : p.t)}</span></div></div>
-      <div class="ptext">${esc(p.text)}</div>
-      ${p.img ? `<img src="${p.img}" style="width:100%;display:block" alt="" />` : ""}
-    </div>
-    <div class="note" style="margin-bottom:8px">${replies.length} jawab</div>
-    ${replies.map(r => `
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
-        <div class="av">${r.a || "🧑"}</div>
-        <div style="flex:1"><b style="font-size:13px">${esc(r.u || "Swag")}</b>
-          <div style="font-size:14px;margin-top:2px">${esc(r.text)}</div></div>
-      </div>`).join("") || `<p class="note">Pehla jawab likho.</p>`}`;
-}
-$("threadBack").onclick = () => { paintFeed(); go("home"); };
-$("threadSend").onclick = () => {
-  const v = $("threadIn").value.trim();
-  if (!v || threadIdx === null) return;
-  const p = posts[threadIdx];
-  p.replies = p.replies || [];
-  p.replies.push({ u:"Swag", a:"🧑", text:v });
-  $("threadIn").value = "";
-  LS.set("posts", posts);
-  paintThread();
-  earn(1); bump(p.u, 4); toast("Jawab juda · +1 coin");
-};
-
-
-
-/* ================= THEME (auto + manual) ================= */
-const THEMES = [["auto","Auto"],["dark","Dark"],["light","Light"],["amoled","Amoled"],["sunset","Sunset"],["ocean","Ocean"]];
-const THEME_BG = { auto:"#070a10", dark:"#070a10", light:"#f4f6fb", amoled:"#000", sunset:"#1a0f1f", ocean:"#06151f" };
-let theme = LS.get("theme", "auto");
-function applyTheme(){
-  document.documentElement.setAttribute("data-theme", theme);
-  const m = $("themeMeta"); if (m) m.setAttribute("content", THEME_BG[theme] || "#070a10");
-  const b = $("themeBtn"); if (b) b.textContent = (THEMES.find(t => t[0] === theme) || THEMES[0])[1];
-}
-$("themeBtn").onclick = () => {
-  const i = THEMES.findIndex(t => t[0] === theme);
-  theme = THEMES[(i + 1) % THEMES.length][0];
-  LS.set("theme", theme); applyTheme();
-  toast("Theme: " + THEMES.find(t => t[0] === theme)[1]);
-};
-applyTheme();
-
-/* ================= EFFORT COINS: jo jyada mehnat kare, use jyada inaam ================= */
-function earn(n){ coins += n; LS.set("coins", coins); paintProfile(); }
-(function dailyBonus(){
-  const today = new Date().toDateString();
-  if (LS.get("lastDay", "") !== today){
-    LS.set("lastDay", today);
-    earn(2);
-    setTimeout(() => toast("Roz aane ka bonus +2 coins"), 600);
+  if (cfg.provider === "free"){
+    try{
+      const r = await fetch("https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai");
+      if (!r.ok) return "";
+      return (await r.text() || "").trim();
+    }catch(e){ return ""; }
   }
-})();
+  return "";   // local — bahar kuch nahi jata
+}
+
+/* AI provider button — local → sarvam → free → local */
+document.addEventListener("click", (e) => {
+  if (e.target.id !== "aiProviderBtn") return;
+  const c = aiCfg();
+  if (c.provider === "local"){
+    const key = prompt("Sarvam AI key (Bharat ki company). Khali chhodo to free provider:");
+    if (key === null) return;
+    if (key.trim()){ setAiCfg({ provider: "sarvam", key: key.trim() }); e.target.textContent = "Sarvam (Bharat)"; toast("Sarvam AI juda — data Bharat me"); }
+    else { setAiCfg({ provider: "free", key: "" }); e.target.textContent = "free (bahar)"; toast("Free AI — sawal bahar jayega"); }
+  } else if (c.provider === "sarvam"){
+    setAiCfg({ provider: "free", key: "" }); e.target.textContent = "free (bahar)"; toast("Free AI — sawal bahar jayega");
+  } else {
+    setAiCfg({ provider: "local", key: "" }); e.target.textContent = "phone me hi"; toast("AI band — kuch bahar nahi jayega");
+  }
+});
 
 /* ---------- start ---------- */
+(function(){
+  const b = document.getElementById("aiProviderBtn");
+  if (b){ const c = aiCfg(); b.textContent = c.provider === "sarvam" ? "Sarvam (Bharat)" : c.provider === "free" ? "free (bahar)" : "phone me hi"; }
+})();
 paintStories(); paintFeed(); paintReels(); paintProfile();
 </script>
 <script>
