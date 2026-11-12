@@ -118,6 +118,9 @@
   .note{color:var(--dim);font-size:12px;line-height:1.6}
 
   body.auth nav{display:none}
+  body:not(.srv) [data-more]{display:none}
+  nav button{position:relative}
+  nav button[data-badge]:not([data-badge=""])::after{content:attr(data-badge);position:absolute;top:6px;left:calc(50% + 8px);background:var(--red);color:#fff;font-size:11px;font-weight:800;border-radius:10px;padding:1px 6px;min-width:18px}
   .lg-in{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:14px;font-family:inherit;margin-bottom:10px}
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;background:#1f2a3d;border:1px solid var(--line);
          color:var(--txt);padding:10px 16px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;z-index:40}
@@ -235,6 +238,7 @@
     <div class="av" id="chatAv" style="width:30px;height:30px;font-size:15px">🟢</div>
     <h1 id="chatTitle" style="font-size:15px">Chat</h1>
     <div class="spacer"></div>
+    <button id="chatMore" style="display:none;background:transparent;border:0;color:var(--txt);font-size:22px">⋯</button>
     <span style="font-size:15px;color:var(--dim)">📞</span>
     <span style="font-size:15px;color:var(--dim);margin-left:12px">🎥</span>
   </div>
@@ -286,6 +290,12 @@
       <div class="coin"><span>Auto-translate DM</span><button id="trBtn" style="background:var(--card2);color:var(--txt)">on</button></div>
       <div class="coin"><span>Tumhari pasand</span><b id="interests" style="font-size:13px;text-align:right">—</b></div>
       <div class="coin"><span>Algorithm reset</span><button id="algoReset" style="background:var(--card2);color:var(--txt)">reset</button></div>
+      <div id="srvSettings" style="display:none">
+        <div class="coin"><span>Password badlo</span><button id="pwBtn" style="background:var(--card2);color:var(--txt)">badlo</button></div>
+        <div class="coin"><span>Naya recovery code</span><button id="rcBtn" style="background:var(--card2);color:var(--txt)">banao</button></div>
+        <div class="coin"><span>Privacy aur Terms</span><span><a href="/privacy.html" target="_blank" style="color:var(--violet)">Privacy</a> · <a href="/terms.html" target="_blank" style="color:var(--violet)">Terms</a></span></div>
+        <div class="coin"><span>Account hamesha ke liye delete</span><button id="delBtn" style="background:var(--red);color:#fff">delete</button></div>
+      </div>
       <div class="coin" id="logoutRow" style="display:none"><span>Account</span><button id="logoutBtn" style="background:var(--card2);color:var(--txt)">logout</button></div>
       <div class="coin"><span>Data saaf karo</span><button id="clearBtn" style="background:var(--red);color:#fff">clear</button></div>
     </div>
@@ -302,9 +312,40 @@
     <input class="lg-in" id="lgPass" type="password" placeholder="Password (6+ akshar)" autocomplete="current-password" />
     <button class="postbtn" id="lgLogin">Login</button>
     <button class="postbtn" id="lgSignup" style="background:var(--card2);color:var(--txt);border:1px solid var(--line)">Naya account banao</button>
+    <button id="lgForgot" style="width:100%;margin-top:6px;background:transparent;border:0;color:var(--violet);font-family:inherit;font-size:14px;font-weight:700">Password bhool gaye?</button>
     <button id="lgOffline" style="width:100%;margin-top:10px;background:transparent;border:0;color:var(--dim);font-family:inherit;font-size:14px">Bina login chalao (sirf is phone me)</button>
   </div>
 </section>
+
+<!-- ================= RECOVERY CODE ================= -->
+<section class="screen" id="recoveryScreen" style="justify-content:center;padding:20px;padding-bottom:20px">
+  <div class="pcard" style="margin:0">
+    <h2 id="rcTitle" style="margin:0 0 6px">Tumhara recovery code</h2>
+    <p class="note" style="margin:0">Password bhool jao to sirf ye code account wapas dilayega. Abhi kahin likh lo ya screenshot le lo. Ye dobara nahi dikhega.</p>
+    <div id="rcCode" style="font-family:ui-monospace,Menlo,monospace;font-size:20px;font-weight:800;letter-spacing:1px;text-align:center;padding:16px;background:var(--card2);border:1px dashed var(--line);border-radius:12px;margin:14px 0;user-select:all;word-break:break-all"></div>
+    <button class="postbtn" id="rcCopy" style="background:var(--card2);color:var(--txt);border:1px solid var(--line);margin-top:0">📋 Copy karo</button>
+    <label style="display:flex;gap:10px;align-items:center;margin:14px 0;font-size:15px"><input type="checkbox" id="rcOk" style="width:24px;height:24px"> Maine code save kar liya</label>
+    <button class="postbtn" id="rcContinue" style="margin-top:0">Aage badho</button>
+  </div>
+</section>
+
+<!-- ================= FORGOT PASSWORD ================= -->
+<section class="screen" id="forgotScreen" style="justify-content:center;padding:20px;padding-bottom:20px">
+  <div class="pcard" style="margin:0">
+    <h2 style="margin:0 0 6px">Password wapas pao</h2>
+    <p class="note" id="fgMsg" style="margin:0 0 14px">Signup par mila recovery code daalo.</p>
+    <input class="lg-in" id="fgUser" placeholder="Username" autocapitalize="none" />
+    <input class="lg-in" id="fgCode" placeholder="Recovery code (XXXX-XXXX-…)" autocapitalize="characters" autocomplete="off" />
+    <input class="lg-in" id="fgPass" type="password" placeholder="Naya password (6+ akshar)" autocomplete="new-password" />
+    <button class="postbtn" id="fgGo">Naya password set karo</button>
+    <button id="fgBack" style="width:100%;margin-top:10px;background:transparent;border:0;color:var(--dim);font-family:inherit;font-size:14px">← Login par wapas</button>
+  </div>
+</section>
+
+<!-- ================= ACTION SHEET ================= -->
+<div id="sheet" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55)">
+  <div id="sheetBox" style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:18px 18px 0 0;padding:12px 12px calc(14px + env(safe-area-inset-bottom));max-height:80%;overflow-y:auto"></div>
+</div>
 
 <nav>
   <button data-s="home" class="on"><span class="ic">🏠</span>Home</button>
@@ -438,6 +479,7 @@ function paintFeed(){
         <button data-thread="${i}">💬 ${(p.replies || []).length}</button>
         <button data-share="${i}">↗️ Share</button>
         <button data-hide="${i}" title="Kam dikhao">🙈</button>
+        <button data-more="${i}" title="Aur">⋯</button>
       </div>
     </article>`; }).join("") || `<p class="note" style="padding:16px">Koi post nahi — Create tab se pehla post banao.</p>`;
 
@@ -604,7 +646,6 @@ let openChat = null;
 if ($("openDm")) $("openDm").onclick = () => { paintDm(); go("dm"); };
 if ($("dmSearch")) $("dmSearch").oninput = () => paintDm();
 if ($("dmNew")) $("dmNew").onclick = () => toast("Naya chat — jald aayega");
-if ($("dmBack")) $("dmBack").onclick = () => go("home");
 if ($("chatBack")) $("chatBack").onclick = () => { paintDm(); go("dm"); };
 
 function paintDm(){
@@ -1130,7 +1171,11 @@ function enterServerMode(user){
 
   // purane local functions ko server-aware banao
   const _set = LS.set;
-  LS.set = (k, v) => { if (SERVER && (k === "posts" || k === "coins")) return; _set(k, v); };
+  LS.set = (k, v) => {
+    if (SERVER && (k === "posts" || k === "coins" || k === "chats")) return;
+    if (SERVER && k === "msgs") { _set(k, { seetal: (v && v.seetal) || [] }); return; }   // doosron ke DM phone me save nahi
+    _set(k, v);
+  };
   earn = function(){};                                    // coins server deta hai
   rankFeed = function(){                                  // order server tay karta hai
     return posts.map((p, i) => ({ i, p, why:p.why })).filter(x => !x.p.muted);
@@ -1222,6 +1267,7 @@ function enterServerMode(user){
     catch(e){ toast(e.message); }
   };
   $("clearBtn").onclick = () => toast("Server mode me data server par hai");
+  setupSocial();
 
   loadFeed();
   api("POST", "/api/daily").then(d => { if (d.given){ coins = d.coins; paintProfile(); toast(`Roz aane ka bonus +${d.given} coins`); } }).catch(() => {});
@@ -1229,6 +1275,7 @@ function enterServerMode(user){
 
 function setupLogin(){
   document.body.classList.add("auth");
+  bindForgot();
   go("login");
   const msg = (m, bad) => { $("loginMsg").textContent = m; $("loginMsg").style.color = bad ? "var(--red)" : ""; };
   const submit = async (kind) => {
@@ -1237,13 +1284,222 @@ function setupLogin(){
     msg("Ruko…");
     try{
       const r = await api("POST", kind === "signup" ? "/api/signup" : "/api/login", { username, password, display });
-      saveToken(r.token); enterServerMode(r.user); go("home");
+      TOKEN = r.token;                       // pehle sirf memory me — recovery code save hone ke baad hi phone me rakhenge
+      const done = () => {
+        saveToken(r.token); enterServerMode(r.user); go("home");
+        if (r.hasRecovery === false) setTimeout(() => toast("Settings me recovery code bana lo — password bhoolne par kaam aayega"), 1500);
+      };
+      if (r.recoveryCode) showRecovery(r.recoveryCode, done); else done();
     }catch(e){ msg(e.message, true); }
   };
   $("lgLogin").onclick = () => submit("login");
   $("lgSignup").onclick = () => submit("signup");
   $("lgPass").onkeydown = (e) => { if (e.key === "Enter") submit("login"); };
   $("lgOffline").onclick = () => { document.body.classList.remove("auth"); go("home"); };
+}
+
+/* ---------- bottom sheet ---------- */
+function openSheet(title, items){
+  const box = $("sheetBox");
+  box.innerHTML = `<div class="note" style="padding:4px 8px 10px;text-align:center">${esc(title)}</div>` +
+    items.map((it, i) => `<button data-sh="${i}" style="display:block;width:100%;text-align:left;background:var(--card2);border:0;color:${it.danger ? "var(--red)" : "var(--txt)"};border-radius:12px;padding:15px;margin-bottom:8px;font-family:inherit;font-size:16px;font-weight:700">${esc(it.label)}</button>`).join("") +
+    `<button data-sh="x" style="display:block;width:100%;background:transparent;border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:15px;font-family:inherit;font-size:16px">Rehne do</button>`;
+  $("sheet").style.display = "block";
+  box.querySelectorAll("[data-sh]").forEach(b => b.onclick = () => {
+    closeSheet();
+    const it = items[b.dataset.sh];
+    if (it) Promise.resolve().then(it.fn).catch(err => toast(err.message));
+  });
+}
+function closeSheet(){ $("sheet").style.display = "none"; }
+$("sheet").onclick = (e) => { if (e.target.id === "sheet") closeSheet(); };
+
+/* ---------- recovery code screen ---------- */
+function showRecovery(code, then, title){
+  $("rcTitle").textContent = title || "Tumhara recovery code";
+  $("rcCode").textContent = code;
+  $("rcOk").checked = false;
+  go("recovery");
+  $("rcCopy").onclick = async () => {
+    try{ await navigator.clipboard.writeText(code); toast("Copy ho gaya"); }
+    catch(e){ toast("Copy nahi hua — kahin likh lo"); }
+  };
+  $("rcContinue").onclick = () => {
+    if (!$("rcOk").checked) return toast("Pehle code save karo, phir tick lagao");
+    then();
+  };
+}
+
+/* ---------- password bhool gaye ---------- */
+function bindForgot(){
+  $("lgForgot").onclick = () => { $("fgUser").value = $("lgUser").value; go("forgot"); };
+  $("fgBack").onclick = () => go("login");
+  $("fgGo").onclick = async () => {
+    const msg = (m, bad) => { $("fgMsg").textContent = m; $("fgMsg").style.color = bad ? "var(--red)" : ""; };
+    const username = $("fgUser").value.trim(), recoveryCode = $("fgCode").value.trim(), newPassword = $("fgPass").value;
+    if (!username || !recoveryCode || !newPassword) return msg("Teeno cheezein bharo", true);
+    msg("Ruko…");
+    try{
+      const r = await api("POST", "/api/recover", { username, recoveryCode, newPassword });
+      TOKEN = r.token;
+      showRecovery(r.recoveryCode, () => { saveToken(r.token); enterServerMode(r.user); go("home"); }, "Naya recovery code (purana bekaar ho gaya)");
+    }catch(e){ msg(e.message, true); }
+  };
+}
+
+/* ---------- server DM, report/block, settings ---------- */
+function setupSocial(){
+  document.body.classList.add("srv");
+
+  // feed ka "⋯" menu
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("#feed [data-more]");
+    if (!b || !SERVER) return;
+    const i = Number(b.dataset.more), p = posts[i];
+    if (!p || !p.sid) return;
+    if (p.uname === ME.username){
+      openSheet("Tumhara post", [{ label:"🗑️ Ye post delete karo", danger:true, fn: async () => {
+        if (!confirm("Ye post hamesha ke liye hat jayega. Pakka?")) return;
+        await api("DELETE", "/api/posts/" + p.sid);
+        posts.splice(i, 1); paintFeed(); toast("Post hat gaya");
+      } }]);
+      return;
+    }
+    const reasons = [["spam","Spam / dhokha"],["abuse","Gaali / pareshan karna"],["nudity","Nagnata"],["violence","Hinsa"],["other","Kuch aur"]];
+    openSheet("@" + p.uname, [
+      { label:"🚩 Report karo", fn: () => openSheet("Kyun report kar rahe ho?", reasons.map(([k, label]) => ({ label, fn: async () => {
+          await api("POST", `/api/posts/${p.sid}/report`, { reason:k });
+          p.muted = true; paintFeed(); toast("Report ho gaya — ab ye tumhe nahi dikhega");
+        } }))) },
+      { label:`🚫 @${p.uname} ko block karo`, danger:true, fn: async () => {
+        if (!confirm(`@${p.uname} ko block karein? Na uske post dikhenge, na wo tumhe message kar payega.`)) return;
+        await api("POST", `/api/users/${p.uname}/block`); await loadFeed(); toast("Block ho gaya");
+      } },
+    ]);
+  });
+
+  // ----- DM (server) -----
+  const AI = { id:"seetal", name:"YouMe AI", av:"🤖", last:"Poochho kuch bhi", t:"" };
+  let lastMsgId = 0, chatTimer = null;
+  const isSrvChat = (id) => String(id).startsWith("u:");
+
+  window.loadConvs = async function(){
+    try{
+      const d = await api("GET", "/api/conversations");
+      const ai = chats.find(c => c.id === "seetal") || AI;
+      chats = [...d.conversations.map(c => ({
+        id:"u:" + c.user.username, name:c.user.display, av:"🧑", username:c.user.username,
+        last:(c.last.mine ? "Tum: " : "") + c.last.text, t:ago(c.last.createdAt), unread:c.unread,
+      })), ai];
+      if ($("dmScreen").classList.contains("on")) paintDm();
+    }catch(e){}
+  };
+
+  async function pullChat(username, id, full){
+    try{
+      const d = await api("GET", `/api/messages/${encodeURIComponent(username)}?after=${full ? 0 : lastMsgId}`);
+      if (openChat !== id) return;
+      if (full){ msgs[id] = []; lastMsgId = 0; }
+      let added = false;
+      d.messages.forEach(m => {
+        if (msgs[id].some(x => x.id === m.id)) return;
+        msgs[id].push({ me:m.mine, t:m.text, ts:m.createdAt, id:m.id }); added = true;
+        lastMsgId = Math.max(lastMsgId, m.id);
+      });
+      if (added || full) paintChat();
+    }catch(e){ if (full) toast(e.message); }
+  }
+
+  const _ocw = openChatWith;
+  openChatWith = function(id){
+    if (!isSrvChat(id)){ $("chatMore").style.display = "none"; return _ocw(id); }
+    const username = id.slice(2);
+    openChat = id;
+    const c = chats.find(x => x.id === id);
+    if (c) c.unread = 0;
+    $("chatAv").textContent = "🧑";
+    $("chatTitle").textContent = c ? c.name : username;
+    $("chatMore").style.display = "";
+    msgs[id] = []; paintChat(); go("chat");
+    clearInterval(chatTimer); lastMsgId = 0;
+    pullChat(username, id, true);
+    chatTimer = setInterval(() => {
+      if (openChat !== id || !$("chatScreen").classList.contains("on")){ clearInterval(chatTimer); return; }
+      if (!document.hidden) pullChat(username, id, false);
+    }, 4000);
+  };
+
+  const _send = $("chatSend").onclick;
+  $("chatSend").onclick = async () => {
+    if (!isSrvChat(openChat)) return _send();
+    const v = $("chatIn").value.trim();
+    if (!v) return;
+    const id = openChat;
+    try{
+      const r = await api("POST", "/api/messages", { to:id.slice(2), text:v });
+      $("chatIn").value = "";
+      msgs[id].push({ me:true, t:v, ts:r.message.createdAt, id:r.message.id });
+      lastMsgId = Math.max(lastMsgId, r.message.id);
+      paintChat();
+    }catch(e){ toast(e.message); }
+  };
+
+  $("chatMore").onclick = () => {
+    if (!isSrvChat(openChat)) return;
+    const u = openChat.slice(2);
+    openSheet("@" + u, [{ label:`🚫 @${u} ko block karo`, danger:true, fn: async () => {
+      if (!confirm(`@${u} ko block karein?`)) return;
+      await api("POST", `/api/users/${u}/block`);
+      chats = chats.filter(c => c.id !== openChat); openChat = null;
+      toast("Block ho gaya"); go("dm");
+    } }]);
+  };
+
+  $("dmNew").onclick = async () => {
+    const term = (prompt("Kisko message bhejna hai? Username likho:") || "").trim().replace(/^@/, "");
+    if (term.length < 2) return;
+    try{
+      const d = await api("GET", "/api/users?q=" + encodeURIComponent(term));
+      const u = d.users.find(x => x.username.toLowerCase() === term.toLowerCase()) || d.users[0];
+      if (!u) return toast("Koi user nahi mila");
+      if (!chats.find(c => c.id === "u:" + u.username)) chats.unshift({ id:"u:" + u.username, name:u.display, av:"🧑", username:u.username, last:"Naya chat", t:"" });
+      openChatWith("u:" + u.username);
+    }catch(e){ toast(e.message); }
+  };
+
+  // Inbox par unread ginti
+  const refreshUnread = async () => {
+    try{
+      const d = await api("GET", "/api/me");
+      ME = d.user; coins = d.user.coins;
+      const nb = document.querySelector('nav [data-s="dm"]');
+      if (nb) nb.dataset.badge = d.unread ? String(Math.min(d.unread, 99)) : "";
+    }catch(e){}
+  };
+  refreshUnread();
+  setInterval(() => { if (!document.hidden) refreshUnread(); }, 30000);
+  const _go2 = go;
+  go = function(s){ _go2(s); if (s === "dm") loadConvs(); };
+
+  // ----- settings -----
+  $("srvSettings").style.display = "";
+  $("pwBtn").onclick = async () => {
+    const current = prompt("Abhi ka password:"); if (current === null) return;
+    const next = prompt("Naya password (6+ akshar):"); if (!next) return;
+    try{ const r = await api("POST", "/api/password", { current, next }); saveToken(r.token); toast("Password badal gaya"); }
+    catch(e){ toast(e.message); }
+  };
+  $("rcBtn").onclick = async () => {
+    const password = prompt("Password daalo (naya recovery code banane ke liye):"); if (password === null) return;
+    try{ const r = await api("POST", "/api/recovery-code", { password }); showRecovery(r.recoveryCode, () => go("profile"), "Naya recovery code (purana bekaar)"); }
+    catch(e){ toast(e.message); }
+  };
+  $("delBtn").onclick = async () => {
+    if (!confirm("Account, saare post, photo aur message hamesha ke liye hat jayenge. Wapas nahi aa sakte. Pakka?")) return;
+    const password = prompt("Pakka karne ke liye password daalo:"); if (password === null) return;
+    try{ await api("POST", "/api/delete-account", { password }); saveToken(""); alert("Account delete ho gaya."); location.reload(); }
+    catch(e){ toast(e.message); }
+  };
 }
 
 (async function boot(){
