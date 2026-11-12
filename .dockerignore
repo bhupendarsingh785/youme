@@ -1,0 +1,9 @@
+.git
+.github
+.gitlab-ci.yml
+node_modules
+data
+*.db*
+.env*
+test
+README.md
