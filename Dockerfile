@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json ./
 COPY server ./server
 COPY public ./public
+COPY scripts ./scripts
 
 # Database yahan rehta hai — isko volume se jodo, warna container restart par data chala jayega
 RUN mkdir -p /data && chown node:node /data
