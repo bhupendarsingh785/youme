@@ -289,7 +289,6 @@
     <div class="pcard">
       <b style="font-size:14px">⚙️ Settings</b>
       <div class="coin"><span>Theme</span><button id="themeBtn" style="background:var(--violet);color:#fff">Auto</button></div>
-      <div class="coin"><span>🤖 AI jawab</span><button id="aiProviderBtn" style="background:var(--card2);color:var(--txt)">phone me hi</button></div>
       <div class="coin"><span>Auto-translate DM</span><button id="trBtn" style="background:var(--card2);color:var(--txt)">on</button></div>
       <div class="coin"><span>Tumhari pasand</span><b id="interests" style="font-size:13px;text-align:right">—</b></div>
       <div class="coin"><span>Algorithm reset</span><button id="algoReset" style="background:var(--card2);color:var(--txt)">reset</button></div>
@@ -382,7 +381,7 @@ try{
 const $ = (id) => document.getElementById(id);
 const LS = {
   get(k, d){ try{ const v = localStorage.getItem("ss." + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
-  set(k, v){ try{ localStorage.setItem("ss." + k, JSON.stringify(v)); }catch(e){} }
+  set(k, v){ try{ localStorage.setItem("ss." + k, JSON.stringify(v)); }catch(e){ try{ toast("Phone ki storage bhar gayi — kuch purani photo posts hatao"); }catch(_){} } }
 };
 function toast(m){ const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove("on"), 1800); }
 
@@ -477,10 +476,10 @@ function paintFeed(){
     <article class="post">
       <div class="phead"><div class="av">${p.a}</div><div><b>${esc(p.u)}</b><br><span>${esc(p.ts ? ago(p.ts) : p.t)}${why ? " · 💡 " + esc(why) : ""}</span></div></div>
       <div class="ptext">${esc(p.text)}</div>
-      ${p.img ? `<img src="${p.img}" style="width:100%;display:block" alt="" />` : (p.media ? `<div class="pmedia">${p.media}</div>` : "")}
+      ${p.img ? `<img src="${esc(p.img)}" loading="lazy" style="width:100%;display:block" alt="" />` : (p.media ? `<div class="pmedia">${esc(p.media)}</div>` : "")}
       <div class="pacts">
         <button data-like="${i}" class="${p.liked ? "liked" : ""}">${p.liked ? "❤️" : "🤍"} ${p.likes || 0}</button>
-        <button data-thread="${i}">💬 ${(p.replies || []).length}</button>
+        <button data-thread="${i}">💬 ${p.replyCount ?? (p.replies || []).length}</button>
         <button data-share="${i}">↗️ Share</button>
         <button data-hide="${i}" title="Kam dikhao">🙈</button>
         <button data-more="${i}" title="Aur">⋯</button>
@@ -721,34 +720,17 @@ $("chatSend").onclick = () => {
 
 
 /* ---------- YouMe AI (apna, kisi doosre system se nahi) ---------- */
-function aiCfg(){
-  try{ return JSON.parse(localStorage.getItem("ym.ai") || "null") || { provider: "local", key: "" }; }
-  catch(e){ return { provider: "local", key: "" }; }
-}
-function setAiCfg(c){ try{ localStorage.setItem("ym.ai", JSON.stringify(c)); }catch(e){} }
-
 async function youmeAsk(prompt){
-  const cfg = aiCfg();
-  if (cfg.provider === "sarvam" && cfg.key){
-    try{
-      const r = await fetch("https://api.sarvam.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + cfg.key },
-        body: JSON.stringify({ model: "sarvam-m", messages: [{ role: "user", content: prompt }], max_tokens: 300 }),
-      });
-      if (!r.ok) return "";
-      const d = await r.json();
-      return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || "";
-    }catch(e){ return ""; }
-  }
-  if (cfg.provider === "free"){
-    try{
-      const r = await fetch("https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai");
-      if (!r.ok) return "";
-      return (await r.text() || "").trim();
-    }catch(e){ return ""; }
-  }
-  return "";
+  const url = "https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai";
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 25000);
+  try{
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error("http " + r.status);
+    const txt = await r.text();
+    return txt && txt.trim().length > 1 ? txt.trim() : "";
+  }catch(e){ return ""; }
+  finally{ clearTimeout(t); }
 }
 
 const YOUME_PROMPT = "Tum YouMe ho — ek dosti wali app. Hinglish (Roman Hindi) me 2-3 line ka pyaar bhara jawab do, aakhir me ek chhota sawal. Sach bolo.";
@@ -967,7 +949,8 @@ $("lensFlip").onclick = async () => {
 $("lensShot").onclick = () => {
   const v = $("lensVideo"), c = $("lensCanvas");
   if (!v.videoWidth) return toast("Camera taiyar nahi");
-  c.width = v.videoWidth; c.height = v.videoHeight;
+  const sc0 = Math.min(1, 1024 / Math.max(v.videoWidth, v.videoHeight));
+  c.width = Math.round(v.videoWidth * sc0); c.height = Math.round(v.videoHeight * sc0);
   const ctx = c.getContext("2d");
   ctx.filter = lensFilter.css || "none";
   ctx.drawImage(v, 0, 0, c.width, c.height);
@@ -976,7 +959,7 @@ $("lensShot").onclick = () => {
     ctx.font = `${Math.round(c.width * (s2.size / 300))}px serif`;
     ctx.fillText(s2.ch, c.width * s2.x / 100, c.height * s2.y / 100);
   });
-  const data = c.toDataURL("image/jpeg", 0.85);
+  const data = c.toDataURL("image/jpeg", 0.8);
   const cap = prompt("Caption likho (khali chhod sakte ho):") || "";
   posts.unshift({ u:"Swag", a:"🧑", t:"abhi", ts:Date.now(), text: cap || "(lens photo)", media:"", img: data, likes:0 });
   LS.set("posts", posts);
@@ -1078,7 +1061,7 @@ function paintThread(){
     <div class="post" style="border:1px solid var(--line);border-radius:14px;margin-bottom:14px">
       <div class="phead"><div class="av">${p.a}</div><div><b>${esc(p.u)}</b><br><span>${esc(p.ts ? ago(p.ts) : p.t)}</span></div></div>
       <div class="ptext">${esc(p.text)}</div>
-      ${p.img ? `<img src="${p.img}" style="width:100%;display:block" alt="" />` : ""}
+      ${p.img ? `<img src="${esc(p.img)}" style="width:100%;display:block" alt="" />` : ""}
     </div>
     <div class="note" style="margin-bottom:8px">${replies.length} jawab</div>
     ${replies.map(r => `
@@ -1132,21 +1115,6 @@ function earn(n){ coins += n; LS.set("coins", coins); paintProfile(); }
 })();
 
 /* ---------- start ---------- */
-document.addEventListener("click", (e) => {
-  if (e.target.id !== "aiProviderBtn") return;
-  const c = aiCfg();
-  if (c.provider === "local"){
-    const key = prompt("Sarvam AI key (Bharat). Khali chhodo = free (bahar jayega):");
-    if (key === null) return;
-    if (key.trim()){ setAiCfg({ provider: "sarvam", key: key.trim() }); e.target.textContent = "Sarvam (Bharat)"; toast("Sarvam AI juda — data Bharat me"); }
-    else { setAiCfg({ provider: "free", key: "" }); e.target.textContent = "free (bahar)"; toast("Free AI — sawal bahar jayega"); }
-  } else if (c.provider === "sarvam"){
-    setAiCfg({ provider: "free", key: "" }); e.target.textContent = "free (bahar)"; toast("Free AI");
-  } else {
-    setAiCfg({ provider: "local", key: "" }); e.target.textContent = "phone me hi"; toast("AI band — kuch bahar nahi jayega");
-  }
-});
-(function(){ const b = document.getElementById("aiProviderBtn"); if (b){ const c = aiCfg(); b.textContent = c.provider === "sarvam" ? "Sarvam (Bharat)" : c.provider === "free" ? "free (bahar)" : "phone me hi"; } })();
 paintStories(); paintFeed(); paintReels(); paintProfile();
 </script>
 <script>
@@ -1156,15 +1124,11 @@ paintStories(); paintFeed(); paintReels(); paintProfile();
    Warna (file se / static hosting se) purana "sirf is phone me" mode chalta hai. */
 let SERVER = false, ME = null;
 const API_BASE = (function(){
-  // ?api=https://... se badal sakte ho (ya localStorage me ym.api)
-  try{
-    const q = new URLSearchParams(location.search).get("api");
-    if (q){ localStorage.setItem("ym.api", q.replace(/\/$/, "")); }
-  }catch(e){}
-  try{ const s = localStorage.getItem("ym.api"); if (s) return s.replace(/\/$/, ""); }catch(e){}
+  // Suraksha: ?api= ya localStorage se server badalna band (phishing link se password chori ho sakta tha)
+  try{ localStorage.removeItem("ym.api"); }catch(e){}
   const h = location.hostname;
   // GitHub Pages / file: par backend alag host par chalta hai
-  if (location.protocol === "file:" || /github\.io$/i.test(h) || /^127\./.test(h)) {
+  if (location.protocol === "file:" || /github\.io$/i.test(h)) {
     return "https://youme-api.onrender.com";
   }
   return "";   // apne hi server par khula hai (same origin)
@@ -1180,7 +1144,8 @@ async function api(method, path, body){
       body: body ? JSON.stringify(body) : undefined,
     });
     const j = await r.json().catch(() => ({}));
-    if (r.status === 401 && TOKEN && path !== "/api/login") { serverLogout(); throw new Error("Dobara login karo"); }
+    const PW_CHECK = ["/api/login", "/api/password", "/api/recovery-code", "/api/delete-account"];
+    if (r.status === 401 && TOKEN && !PW_CHECK.includes(path)) { serverLogout(); throw new Error("Dobara login karo"); }
     if (!r.ok) throw new Error(j.error || "Kuch gadbad ho gayi");
     return j;
   }catch(e){
@@ -1192,8 +1157,8 @@ async function api(method, path, body){
 function saveToken(t){ TOKEN = t; try{ t ? localStorage.setItem("ym.token", t) : localStorage.removeItem("ym.token"); }catch(e){} }
 function serverLogout(){ saveToken(""); location.reload(); }
 
-async function backendUp(){
-  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 2500);
+async function backendUp(ms = 2500){
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), ms);
   try{
     const r = await fetch(API_BASE + "/api/health", { signal: ctrl.signal });
     const j = await r.json(); return r.ok && j && j.ok === true;
@@ -1202,8 +1167,8 @@ async function backendUp(){
 
 function mapPost(r){
   return { sid:r.id, u:r.user.display, uname:r.user.username, a:"🧑", t:"", ts:r.createdAt,
-           text:r.text, media:r.media, img:r.img, likes:r.likes, liked:r.liked, why:r.why,
-           replies: Array.from({ length:r.replies }, () => ({ u:"", text:"" })) };
+           text:r.text, media:r.media, img: r.img ? (r.img.startsWith("/api/") ? API_BASE + r.img : r.img) : null,
+           likes:r.likes, liked:r.liked, why:r.why, replyCount:r.replies, replies: [] };
 }
 
 async function loadFeed(){
@@ -1240,6 +1205,9 @@ function enterServerMode(user){
   };
   $("logoutRow").style.display = "";
   $("logoutBtn").onclick = serverLogout;
+  paintAlerts = function(){ $("alerts").innerHTML = `<p class="note" style="padding:16px">Abhi koi alert nahi.</p>`; };
+  $("tipBtn").onclick = () => toast("Tip jald aayega — abhi demo hai");
+  const cNote = document.querySelector("#createScreen p.note"); if (cNote) cNote.textContent = "Post server par save hota hai — sab log dekh sakte hain.";
 
   // like / hide / share: pehle se chalne wala UI optimistic rehta hai, server ko bhi batao
   document.addEventListener("click", (e) => {
@@ -1259,6 +1227,7 @@ function enterServerMode(user){
     try{
       const d = await api("GET", "/api/posts/" + p.sid);
       p.replies = d.replies.map(r => ({ u:r.user.display, a:"🧑", text:r.text }));
+      p.replyCount = p.replies.length;
       if (threadIdx === i) paintThread();
     }catch(e){ toast(e.message); }
   };
@@ -1270,7 +1239,7 @@ function enterServerMode(user){
     try{
       const r = await api("POST", `/api/posts/${p.sid}/replies`, { text:v });
       $("threadIn").value = ""; coins = r.coins;
-      p.replies.push({ u:ME.display, a:"🧑", text:v });
+      p.replies.push({ u:ME.display, a:"🧑", text:v }); p.replyCount = p.replies.length;
       paintThread();
       toast("Jawab juda" + (r.earned ? ` · +${r.earned} coin` : ""));
     }catch(e){ toast(e.message); }
@@ -1318,7 +1287,7 @@ function enterServerMode(user){
   $("clearBtn").onclick = () => toast("Server mode me data server par hai");
   setupSocial();
 
-  loadFeed();
+  go("home");          // go("home") khud ek baar feed laata hai
   api("POST", "/api/daily").then(d => { if (d.given){ coins = d.coins; paintProfile(); toast(`Roz aane ka bonus +${d.given} coins`); } }).catch(() => {});
 }
 
@@ -1335,7 +1304,7 @@ function setupLogin(){
       const r = await api("POST", kind === "signup" ? "/api/signup" : "/api/login", { username, password, display });
       TOKEN = r.token;                       // pehle sirf memory me — recovery code save hone ke baad hi phone me rakhenge
       const done = () => {
-        saveToken(r.token); enterServerMode(r.user); go("home");
+        saveToken(r.token); enterServerMode(r.user);
         if (r.hasRecovery === false) setTimeout(() => toast("Settings me recovery code bana lo — password bhoolne par kaam aayega"), 1500);
       };
       if (r.recoveryCode) showRecovery(r.recoveryCode, done); else done();
@@ -1391,7 +1360,7 @@ function bindForgot(){
     try{
       const r = await api("POST", "/api/recover", { username, recoveryCode, newPassword });
       TOKEN = r.token;
-      showRecovery(r.recoveryCode, () => { saveToken(r.token); enterServerMode(r.user); go("home"); }, "Naya recovery code (purana bekaar ho gaya)");
+      showRecovery(r.recoveryCode, () => { saveToken(r.token); enterServerMode(r.user); }, "Naya recovery code (purana bekaar ho gaya)");
     }catch(e){ msg(e.message, true); }
   };
 }
@@ -1552,7 +1521,26 @@ function setupSocial(){
 }
 
 (async function boot(){
-  if (!(await backendUp())) return;                 // backend nahi mila → local mode
+  // Render free server 15 min baad so jaata hai, jagne me 30-60 sec — tab tak intezaar karo
+  let offline = false;
+  document.body.classList.add("auth"); go("login");
+  $("lgOffline").onclick = () => { offline = true; document.body.classList.remove("auth"); go("home"); };
+  const say = (m) => { $("loginMsg").textContent = m; $("loginMsg").style.color = ""; };
+  const wait = () => say("Server abhi jag raha hai — bas thoda ruko…");
+  $("lgLogin").onclick = wait; $("lgSignup").onclick = wait; $("lgForgot").onclick = wait;
+  say("Server se jud rahe hain…");
+  let up = await backendUp(4000);
+  if (!up && !offline){
+    say("Server jag raha hai — 30-60 second lag sakte hain…");
+    const until = Date.now() + 90000;
+    while (!up && !offline && Date.now() < until){
+      up = await backendUp(25000);
+      if (!up) await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  if (offline) return;
+  if (!up){ say("Server nahi mila. Internet check karke page refresh karo, ya 'Bina login chalao' dabao."); return; }
+  say("Login karo ya naya account banao");
   if (TOKEN){
     try{ const d = await api("GET", "/api/me"); enterServerMode(d.user); return; }
     catch(e){ saveToken(""); }
