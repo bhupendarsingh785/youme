@@ -127,6 +127,9 @@
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(100px + env(safe-area-inset-bottom));background:#1f2a3d;border:1px solid var(--line);
          color:var(--txt);padding:10px 16px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;z-index:40}
   .toast.on{opacity:1}
+  .sbtn{flex:1;min-height:52px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+  .sbtn.off{opacity:.45}
+  .sbtn .g{font-weight:900;color:#4285f4}
 </style>
 </head>
 <body>
@@ -315,6 +318,14 @@
     <button class="postbtn" id="lgLogin">Login</button>
     <button class="postbtn" id="lgSignup" style="background:var(--card2);color:var(--txt);border:1px solid var(--line)">Naya account banao</button>
     <button id="lgForgot" style="width:100%;margin-top:6px;background:transparent;border:0;color:var(--violet);font-family:inherit;font-size:14px;font-weight:700">Password bhool gaye?</button>
+    <div id="socialBox" style="margin-top:12px">
+      <div class="note" style="display:flex;align-items:center;gap:10px;margin:0 0 12px"><span style="flex:1;height:1px;background:var(--line)"></span>ya isse login karo<span style="flex:1;height:1px;background:var(--line)"></span></div>
+      <div style="display:flex;gap:8px">
+        <button class="sbtn" id="lgGoogle"><span class="g">G</span> Google</button>
+        <button class="sbtn" id="lgEmail">✉️ Email</button>
+        <button class="sbtn" id="lgMore" style="flex:0 0 58px;font-size:22px" aria-label="Aur tareeke se login">⋯</button>
+      </div>
+    </div>
     <button id="lgOffline" style="width:100%;margin-top:10px;background:transparent;border:0;color:var(--dim);font-family:inherit;font-size:14px">Bina login chalao (sirf is phone me)</button>
   </div>
 </section>
@@ -328,6 +339,21 @@
     <button class="postbtn" id="rcCopy" style="background:var(--card2);color:var(--txt);border:1px solid var(--line);margin-top:0">📋 Copy karo</button>
     <label style="display:flex;gap:10px;align-items:center;margin:14px 0;font-size:15px"><input type="checkbox" id="rcOk" style="width:24px;height:24px"> Maine code save kar liya</label>
     <button class="postbtn" id="rcContinue" style="margin-top:0">Aage badho</button>
+  </div>
+</section>
+
+<!-- ================= EMAIL CODE LOGIN ================= -->
+<section class="screen" id="emailScreen" style="justify-content:center;padding:20px;padding-bottom:20px">
+  <div class="pcard" style="margin:0">
+    <h2 style="margin:0 0 6px">✉️ Email se login</h2>
+    <p class="note" id="emMsg" style="margin:0 0 14px">Apna email daalo — hum 6 ankon ka code bhejenge.</p>
+    <input class="lg-in" id="emAddr" type="email" placeholder="tum@example.com" autocapitalize="none" autocomplete="email" />
+    <button class="postbtn" id="emSend" style="margin-top:0">Code bhejo</button>
+    <div id="emCodeBox" style="display:none;margin-top:14px">
+      <input class="lg-in" id="emCode" inputmode="numeric" maxlength="6" placeholder="6 ank ka code" autocomplete="one-time-code" style="letter-spacing:6px;font-size:22px;text-align:center" />
+      <button class="postbtn" id="emGo" style="margin-top:0">Login karo</button>
+    </div>
+    <button id="emBack" style="width:100%;margin-top:10px;background:transparent;border:0;color:var(--dim);font-family:inherit;font-size:14px">← Login par wapas</button>
   </div>
 </section>
 
@@ -631,10 +657,10 @@ $("clearBtn").onclick = () => {
 
 function imgUrl(u){
   if (!u) return "";
-  const s2 = String(u);
-  if (/^https?:|^data:|^blob:/.test(s2)) return s2;      // poora URL / data URL
-  if (s2.startsWith("/api/")) return (API_BASE || "") + s2;  // backend alag host par hai
-  return s2;
+  const x = String(u);
+  if (/^https?:|^data:|^blob:/.test(x)) return x;
+  if (x.startsWith("/api/")) return (API_BASE || "") + x;
+  return x;
 }
 
 function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -1302,12 +1328,15 @@ function enterServerMode(user){
 function setupLogin(){
   document.body.classList.add("auth");
   bindForgot();
+  bindSocial();
   go("login");
   const msg = (m, bad) => { $("loginMsg").textContent = m; $("loginMsg").style.color = bad ? "var(--red)" : ""; };
+  if (SOCIAL_ERR){ msg(SOCIAL_ERR, true); SOCIAL_ERR = ""; }
   const submit = async (kind) => {
     const username = $("lgUser").value.trim(), password = $("lgPass").value, display = $("lgName").value.trim();
-    if (!username || !password) return msg("Username aur password dono likho", true);
-    if (!(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(username) || /^[a-z0-9_]{3,20}$/.test(username)))
+    if (!username || !password) return msg("Email/username aur password dono likho", true);
+    const EMAIL_OK = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(username);
+    if (!EMAIL_OK && !/^[a-z0-9_]{3,20}$/.test(username))
       return msg("Email (naam@gmail.com) ya username (a-z 0-9 _, 3-20 akshar) daalo", true);
     msg("Ruko…");
     try{
@@ -1324,38 +1353,6 @@ function setupLogin(){
   $("lgSignup").onclick = () => submit("signup");
   $("lgPass").onkeydown = (e) => { if (e.key === "Enter") submit("login"); };
   $("lgOffline").onclick = () => { document.body.classList.remove("auth"); go("home"); };
-
-  /* ---- username ki live jaanch: email daala to saaf batao aur sudhar do ---- */
-  const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-  const okUser = (u) => EMAIL_RE.test(u) || /^[a-z0-9_]{3,20}$/.test(u);
-  const fromEmail = (v) => (v.split("@")[0] || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
-
-  function checkUser(){
-    const el = $("lgUser");
-    const v = el.value.trim();
-    if (!v){ msg(""); return; }
-    if (v.includes("@")){
-      if (EMAIL_RE.test(v)){ el.dataset.sug = ""; msg(""); return; }   // email theek hai
-      msg("Email poora likho (jaise naam@gmail.com) ya username (a-z 0-9 _)", true);
-      return;
-    }
-    if (!okUser(v)){
-      msg("Username 3-20 akshar, sirf a-z 0-9 _ (bade akshar aur space nahi)", true);
-      return;
-    }
-    el.dataset.sug = "";
-    msg("");
-  }
-
-  $("lgUser").addEventListener("input", checkUser);
-  $("lgUser").addEventListener("blur", checkUser);
-
-  // suggestion par tap karo to username bhar jaye
-  $("loginMsg").style.cursor = "pointer";
-  $("loginMsg").addEventListener("click", () => {
-    const sug = $("lgUser").dataset.sug;
-    if (sug){ $("lgUser").value = sug; $("lgUser").dataset.sug = ""; checkUser(); }
-  });
 }
 
 /* ---------- bottom sheet ---------- */
@@ -1393,6 +1390,16 @@ function showRecovery(code, then, title){
 /* ---------- password bhool gaye ---------- */
 function bindForgot(){
   $("lgForgot").onclick = () => { $("fgUser").value = $("lgUser").value; go("forgot"); };
+
+  // live jaanch — email ya username, dono chalenge
+  const EMAIL_T = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  $("lgUser").addEventListener("input", () => {
+    const v = $("lgUser").value.trim();
+    if (!v){ msg(""); return; }
+    if (EMAIL_T.test(v) || /^[a-z0-9_]{3,20}$/.test(v)){ msg(""); return; }
+    if (v.includes("@")) msg("Email poora likho (naam@gmail.com)", true);
+    else msg("Username 3-20 akshar: a-z 0-9 _ (ya email daalo)", true);
+  });
   $("fgBack").onclick = () => go("login");
   $("fgGo").onclick = async () => {
     const msg = (m, bad) => { $("fgMsg").textContent = m; $("fgMsg").style.color = bad ? "var(--red)" : ""; };
@@ -1543,24 +1550,94 @@ function setupSocial(){
 
   // ----- settings -----
   $("srvSettings").style.display = "";
+  const noPw = () => ME && ME.hasPassword === false;     // Google/Email se bana account
+  if (noPw()) $("pwBtn").textContent = "set karo";
   $("pwBtn").onclick = async () => {
-    const current = prompt("Abhi ka password:"); if (current === null) return;
-    const next = prompt("Naya password (6+ akshar):"); if (!next) return;
-    try{ const r = await api("POST", "/api/password", { current, next }); saveToken(r.token); toast("Password badal gaya"); }
+    const current = noPw() ? "" : prompt("Abhi ka password:"); if (current === null) return;
+    const next = prompt(noPw() ? "Naya password banao (6+ akshar) — phir username se bhi login kar paoge:" : "Naya password (6+ akshar):"); if (!next) return;
+    try{ const r = await api("POST", "/api/password", { current, next }); saveToken(r.token); ME.hasPassword = true; $("pwBtn").textContent = "badlo"; toast("Password set ho gaya"); }
     catch(e){ toast(e.message); }
   };
   $("rcBtn").onclick = async () => {
-    const password = prompt("Password daalo (naya recovery code banane ke liye):"); if (password === null) return;
+    const password = noPw() ? "" : prompt("Password daalo (naya recovery code banane ke liye):"); if (password === null) return;
     try{ const r = await api("POST", "/api/recovery-code", { password }); showRecovery(r.recoveryCode, () => go("profile"), "Naya recovery code (purana bekaar)"); }
     catch(e){ toast(e.message); }
   };
   $("delBtn").onclick = async () => {
     if (!confirm("Account, saare post, photo aur message hamesha ke liye hat jayenge. Wapas nahi aa sakte. Pakka?")) return;
-    const password = prompt("Pakka karne ke liye password daalo:"); if (password === null) return;
+    const password = noPw() ? "" : prompt("Pakka karne ke liye password daalo:"); if (password === null) return;
     try{ await api("POST", "/api/delete-account", { password }); saveToken(""); alert("Account delete ho gaya."); location.reload(); }
     catch(e){ toast(e.message); }
   };
 }
+
+/* ================= SOCIAL + EMAIL LOGIN =================
+   Google aur Email saamne, baaki sab (Apple, Microsoft, WeChat, Kakao, LINE...) "⋯" me.
+   Kaun sa chalu hai, ye server batata hai (jiski key server par lagi hai). */
+let AUTH_PROVIDERS = [], EMAIL_READY = false, SOCIAL_ERR = "", SOCIAL_NEW = false;
+(function readLoginReturn(){
+  // Provider se wapas aane par token URL ke # me aata hai — use utha kar URL saaf karo
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (!h.has("ym_token") && !h.has("ym_error")) return;
+  if (h.get("ym_token")) saveToken(h.get("ym_token"));
+  SOCIAL_ERR = h.get("ym_error") || "";
+  SOCIAL_NEW = h.get("ym_new") === "1";
+  try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+})();
+
+async function loadProviders(){
+  try{ const d = await api("GET", "/api/auth/providers"); AUTH_PROVIDERS = d.providers || []; EMAIL_READY = !!d.email; }catch(e){}
+  const g = AUTH_PROVIDERS.find(p => p.key === "google");
+  $("lgGoogle").classList.toggle("off", !(g && g.ready));
+  $("lgEmail").classList.toggle("off", !EMAIL_READY);
+}
+function startProvider(key){
+  const p = AUTH_PROVIDERS.find(x => x.key === key);
+  if (!p || !p.ready) return toast((p ? p.label : "Ye") + " login abhi chalu nahi hai");
+  const ret = location.href.split("#")[0];
+  location.href = API_BASE + `/api/auth/${encodeURIComponent(key)}/start?return=` + encodeURIComponent(ret);
+}
+function bindSocial(){
+  $("lgGoogle").onclick = () => startProvider("google");
+  $("lgEmail").onclick = openEmailLogin;
+  $("lgMore").onclick = () => {
+    const rest = AUTH_PROVIDERS.filter(p => p.key !== "google").sort((a, b) => b.ready - a.ready);
+    openSheet("Kisi bhi verified account se login", [
+      { label:"✉️ Email code", fn: openEmailLogin },
+      ...rest.map(p => ({ label:`${p.flag} ${p.icon}  ${p.label}${p.ready ? "" : "  (abhi band)"}`, fn: () => startProvider(p.key) })),
+    ]);
+  };
+  loadProviders();
+}
+
+function openEmailLogin(){
+  if (!EMAIL_READY) return toast("Email login abhi chalu nahi hai");
+  $("emCodeBox").style.display = "none"; $("emCode").value = "";
+  emMsg("Apna email daalo — hum 6 ankon ka code bhejenge.");
+  go("email");
+}
+function emMsg(m, bad){ $("emMsg").textContent = m; $("emMsg").style.color = bad ? "var(--red)" : ""; }
+$("emBack").onclick = () => go("login");
+$("emSend").onclick = async () => {
+  const email = $("emAddr").value.trim();
+  if (!email) return emMsg("Email likho", true);
+  emMsg("Bhej rahe hain…");
+  try{
+    await api("POST", "/api/auth/email/start", { email });
+    $("emCodeBox").style.display = ""; $("emCode").focus();
+    emMsg("Code bhej diya — inbox (aur spam folder) dekho. 10 minute tak chalega.");
+  }catch(e){ emMsg(e.message, true); }
+};
+$("emGo").onclick = async () => {
+  const email = $("emAddr").value.trim(), code = $("emCode").value.trim();
+  if (code.length < 6) return emMsg("6 ank ka code daalo", true);
+  try{
+    const r = await api("POST", "/api/auth/email/verify", { email, code });
+    saveToken(r.token); enterServerMode(r.user);
+    if (r.created) setTimeout(() => toast("Swagat hai! Naya account ban gaya — @" + r.user.username), 600);
+  }catch(e){ emMsg(e.message, true); }
+};
+$("emCode").onkeydown = (e) => { if (e.key === "Enter") $("emGo").click(); };
 
 (async function boot(){
   // Render free server 15 min baad so jaata hai, jagne me 30-60 sec — tab tak intezaar karo
@@ -1570,6 +1647,7 @@ function setupSocial(){
   const say = (m) => { $("loginMsg").textContent = m; $("loginMsg").style.color = ""; };
   const wait = () => say("Server abhi jag raha hai — bas thoda ruko…");
   $("lgLogin").onclick = wait; $("lgSignup").onclick = wait; $("lgForgot").onclick = wait;
+  $("lgGoogle").onclick = wait; $("lgEmail").onclick = wait; $("lgMore").onclick = wait;
   say("Server se jud rahe hain…");
   let up = await backendUp(4000);
   if (!up && !offline){
@@ -1584,7 +1662,11 @@ function setupSocial(){
   if (!up){ say("Server nahi mila. Internet check karke page refresh karo, ya 'Bina login chalao' dabao."); return; }
   say("Login karo ya naya account banao");
   if (TOKEN){
-    try{ const d = await api("GET", "/api/me"); enterServerMode(d.user); return; }
+    try{
+      const d = await api("GET", "/api/me"); enterServerMode(d.user);
+      if (SOCIAL_NEW) setTimeout(() => toast("Swagat hai! Naya account ban gaya — @" + d.user.username), 600);
+      return;
+    }
     catch(e){ saveToken(""); }
   }
   setupLogin();
