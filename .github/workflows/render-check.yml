@@ -1,9 +1,5 @@
 name: Render — env jaanch (safe)
 
-# Render API se service ki env values padhta hai aur SAFE report deta hai.
-# Secret khud print nahi hota — sirf uska roop (prefix, lambai, space hai ya nahi).
-# Chahiye: secrets RENDER_API_KEY, RENDER_SERVICE_ID
-
 on:
   workflow_dispatch:
 
@@ -14,6 +10,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Env values jaancho
         env:
           RK: ${{ secrets.RENDER_API_KEY }}
@@ -21,50 +18,15 @@ jobs:
         run: |
           set -uo pipefail
           if [ -z "${RK:-}" ] || [ -z "${SID:-}" ]; then
-            echo "::error::RENDER_API_KEY ya RENDER_SERVICE_ID secret nahi hai"
-            exit 1
+            echo "::error::RENDER_API_KEY ya RENDER_SERVICE_ID secret nahi hai"; exit 1
           fi
           CODE=$(curl -sS -o /tmp/env.json -w '%{http_code}' \
-            -H "Authorization: Bearer $RK" \
-            -H "Accept: application/json" \
+            -H "Authorization: Bearer $RK" -H "Accept: application/json" \
             "https://api.render.com/v1/services/$SID/env-vars")
           echo "HTTP $CODE"
           if [ "$CODE" != "200" ]; then
-            echo "::error::Render API ne jawab nahi diya (HTTP $CODE) — key ya service id galat"
+            echo "::error::Render API ne jawab nahi diya (HTTP $CODE)"
             head -c 400 /tmp/env.json || true
             exit 1
           fi
-          python3 - <<'PY'
-          import json, re
-          data = json.load(open("/tmp/env.json"))
-          rows = []
-          for item in data:
-              ev = item.get("envVar", item)
-              rows.append((ev.get("key", ""), ev.get("value", "") or ""))
-          print(f"kul env vars: {len(rows)}")
-          print("")
-          for k, v in sorted(rows):
-              if k == "GOOGLE_CLIENT_SECRET":
-                  prefix = v[:7]
-                  ok_prefix = v.startswith("GOCSPX-")
-                  ws = "SPACE/NEWLINE HAI" if (v != v.strip() or " " in v or "\n" in v) else "saaf"
-                  print(f"{k}: lambai={len(v)} prefix={prefix!r} GOCSPX_se_shuru={ok_prefix} {ws}")
-              elif k == "GOOGLE_CLIENT_ID":
-                  ok = v.endswith(".apps.googleusercontent.com")
-                  print(f"{k}: lambai={len(v)} sahi_format={ok} space={'HAAN' if v != v.strip() else 'nahi'}")
-              elif k == "PUBLIC_URL":
-                  print(f"{k}: {v}")
-              elif k == "JWT_SECRET":
-                  print(f"{k}: lambai={len(v)} (chhupa hua)")
-              else:
-                  print(f"{k}: lambai={len(v)}")
-          print("")
-          gs = dict(rows).get("GOOGLE_CLIENT_SECRET", "")
-          gid = dict(rows).get("GOOGLE_CLIENT_ID", "")
-          if not gs.startswith("GOCSPX-"):
-              print("❌ GOOGLE_CLIENT_SECRET galat lag raha hai (GOCSPX- se shuru hona chahiye)")
-          elif gid and not gid.endswith(".apps.googleusercontent.com"):
-              print("❌ GOOGLE_CLIENT_ID adhura lag raha hai")
-          else:
-              print("✅ dono values ka roop theek lag raha hai — agar login phir bhi fail ho to Google me client naya banao")
-          PY
+          python3 scripts/render-check.py /tmp/env.json
