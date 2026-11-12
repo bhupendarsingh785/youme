@@ -27,6 +27,8 @@
   :root[data-theme="sunset"]{ --bg:#1a0f1f; --card:#2a1630; --card2:#371d3d; --line:#4f2a55; --txt:#fff1f5; --dim:#d9a6c4; --bar:#22122a; --violet:#ff7a59; --pink:#ff4d8d; }
   :root[data-theme="ocean"]{ --bg:#06151f; --card:#0c2433; --card2:#12324a; --line:#1d4763; --txt:#e8f7ff; --dim:#8fc1d9; --bar:#081c2a; --violet:#0ea5e9; --pink:#14b8a6; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  /* Lens aur Story poori screen hain — neeche ka nav unke buttons ko dhakta tha */
+  body.fullscreen nav{display:none}
   /* bade, aaram se dabne wale buttons */
   button{min-height:44px;min-width:44px;cursor:pointer;touch-action:manipulation}
   button:active{transform:scale(.96)}
@@ -36,7 +38,7 @@
        overflow:hidden;font-size:15px}
 
   /* ---------- screens ---------- */
-  .screen{position:absolute;inset:0;display:none;flex-direction:column;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
   .screen.on{display:flex}
   .topbar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--bar)}
   .topbar h1{font-size:19px;margin:0;font-weight:800}
@@ -74,18 +76,18 @@
   .pacts button.liked{color:var(--red)}
 
   /* ---------- reels ---------- */
-  #reelsScreen{padding-bottom:0}
+  #reelsScreen{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
   .reels{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;background:#000}
   .reel{height:100%;scroll-snap-align:start;position:relative;display:flex;align-items:center;justify-content:center;
         background:linear-gradient(160deg,#1a2440,#0a0f18 60%)}
   .reel .big{font-size:64px;opacity:.9}
-  .reel .side{position:absolute;right:12px;bottom:96px;display:flex;flex-direction:column;gap:18px;text-align:center}
+  .reel .side{position:absolute;right:12px;bottom:84px;display:flex;flex-direction:column;gap:18px;text-align:center}
   .reel .side button{background:rgba(10,15,24,.55);border:0;color:#fff;border-radius:50%;width:56px;height:56px;font-size:26px}
   .reel .side small{display:block;font-size:10.5px;color:#dbe6f5;margin-top:3px}
-  .reel .meta{position:absolute;left:14px;bottom:96px;right:80px}
+  .reel .meta{position:absolute;left:14px;bottom:84px;right:80px}
   .reel .meta b{font-size:14.5px}
   .reel .meta p{margin:4px 0 0;font-size:12.5px;color:#cfe0f5;line-height:1.5}
-  .reel .filterbar{position:absolute;left:12px;bottom:24px;display:flex;gap:9px;overflow-x:auto;right:12px;padding-bottom:4px}
+  .reel .filterbar{position:absolute;left:12px;bottom:14px;display:flex;gap:9px;overflow-x:auto;right:12px;padding-bottom:4px}
   .reel .filterbar button{flex:0 0 auto;background:rgba(10,15,24,.6);border:1px solid rgba(255,255,255,.16);color:#fff;
                           border-radius:24px;padding:11px 18px;font-size:14.5px;font-family:inherit}
   .reel .filterbar button.on{background:var(--violet);border-color:var(--violet)}
@@ -122,7 +124,7 @@
   nav button{position:relative}
   nav button[data-badge]:not([data-badge=""])::after{content:attr(data-badge);position:absolute;top:6px;left:calc(50% + 8px);background:var(--red);color:#fff;font-size:11px;font-weight:800;border-radius:10px;padding:1px 6px;min-width:18px}
   .lg-in{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:14px;font-family:inherit;margin-bottom:10px}
-  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;background:#1f2a3d;border:1px solid var(--line);
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(100px + env(safe-area-inset-bottom));background:#1f2a3d;border:1px solid var(--line);
          color:var(--txt);padding:10px 16px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;z-index:40}
   .toast.on{opacity:1}
 </style>
@@ -386,6 +388,7 @@ function toast(m){ const t = $("toast"); t.textContent = m; t.classList.add("on"
 /* ---------- nav ---------- */
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => go(b.dataset.s));
 function go(s){
+  document.body.classList.toggle("fullscreen", s === "lens" || s === "story");
   const was = (document.querySelector(".screen.on") || {}).id;
   if (s !== "lens" && typeof lensStream !== "undefined" && lensStream){ if (typeof stopAr === "function") stopAr(); stopLens(); }
   document.querySelectorAll(".screen").forEach(x => x.classList.toggle("on", x.id === s + "Screen"));
