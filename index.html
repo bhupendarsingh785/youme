@@ -120,6 +120,22 @@
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;background:#1f2a3d;border:1px solid var(--line);
          color:var(--txt);padding:10px 16px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;z-index:40}
   .toast.on{opacity:1}
+
+  /* YOU-ME bade akshar — phone par chhota na lage */
+  html{ font-size:17px; }
+  body{ font-size:16px; line-height:1.55; }
+  .ptext{ font-size:16px; }
+  .note{ font-size:13.5px; }
+  .phead b{ font-size:15.5px; }
+  .pacts button{ font-size:14px; }
+  nav button{ font-size:12px; padding:10px 2px 12px; }
+  nav button .ic{ font-size:22px; }
+  .topbar h1{ font-size:20px; }
+  .screen{ padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  nav{ padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
+  /* bade button, aaram se dabne wale */
+  .postbtn{ font-size:17px; padding:16px; }
+  input, textarea{ font-size:16px !important; }
 </style>
 </head>
 <body>
@@ -129,7 +145,7 @@
   <div class="topbar">
     <h1>YouMe</h1><span class="dot"></span>
     <div class="spacer"></div>
-    <button id="openDm" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:10px 16px;font-size:16px">💬 DM</button>
+    <button id="openDm" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:10px 16px;font-size:16px">💬 Inbox</button>
   </div>
   <div class="scroll">
     <div class="stories" id="stories"></div>
