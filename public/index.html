@@ -309,7 +309,7 @@
   <div class="pcard" style="margin:0">
     <h1 style="margin:0 0 4px;font-size:26px">YouMe</h1>
     <p class="note" id="loginMsg" style="margin:0 0 14px">Login karo ya naya account banao</p>
-    <input class="lg-in" id="lgUser" placeholder="Username (a-z, 0-9, _)" autocomplete="username" autocapitalize="none" />
+    <input class="lg-in" id="lgUser" placeholder="Email ya username" autocomplete="username" autocapitalize="none" />
     <input class="lg-in" id="lgName" placeholder="Naam (sirf naye account ke liye)" autocomplete="nickname" />
     <input class="lg-in" id="lgPass" type="password" placeholder="Password (6+ akshar)" autocomplete="current-password" />
     <button class="postbtn" id="lgLogin">Login</button>
@@ -1299,8 +1299,8 @@ function setupLogin(){
   const submit = async (kind) => {
     const username = $("lgUser").value.trim(), password = $("lgPass").value, display = $("lgName").value.trim();
     if (!username || !password) return msg("Username aur password dono likho", true);
-    if (username.includes("@")) return msg("Username me email nahi chalta — sirf a-z 0-9 _ (jaise swag_123)", true);
-    if (!/^[a-z0-9_]{3,20}$/.test(username)) return msg("Username 3-20 akshar: sirf a-z 0-9 _", true);
+    if (!(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(username) || /^[a-z0-9_]{3,20}$/.test(username)))
+      return msg("Email (naam@gmail.com) ya username (a-z 0-9 _, 3-20 akshar) daalo", true);
     msg("Ruko…");
     try{
       const r = await api("POST", kind === "signup" ? "/api/signup" : "/api/login", { username, password, display });
@@ -1318,7 +1318,8 @@ function setupLogin(){
   $("lgOffline").onclick = () => { document.body.classList.remove("auth"); go("home"); };
 
   /* ---- username ki live jaanch: email daala to saaf batao aur sudhar do ---- */
-  const okUser = (u) => /^[a-z0-9_]{3,20}$/.test(u);
+  const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  const okUser = (u) => EMAIL_RE.test(u) || /^[a-z0-9_]{3,20}$/.test(u);
   const fromEmail = (v) => (v.split("@")[0] || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
 
   function checkUser(){
@@ -1326,9 +1327,8 @@ function setupLogin(){
     const v = el.value.trim();
     if (!v){ msg(""); return; }
     if (v.includes("@")){
-      const sug = fromEmail(v);
-      msg("Email nahi — username daalo. Suggestion: " + (sug || "swag") + " (tap karo)", true);
-      el.dataset.sug = sug || "swag";
+      if (EMAIL_RE.test(v)){ el.dataset.sug = ""; msg(""); return; }   // email theek hai
+      msg("Email poora likho (jaise naam@gmail.com) ya username (a-z 0-9 _)", true);
       return;
     }
     if (!okUser(v)){
