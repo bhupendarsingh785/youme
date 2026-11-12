@@ -1,4 +1,4 @@
-import { scryptSync, randomBytes, timingSafeEqual, createHmac } from "node:crypto";
+import { scryptSync, randomBytes, randomInt, timingSafeEqual, createHmac } from "node:crypto";
 
 export function hashPassword(pw) {
   const salt = randomBytes(16);
@@ -35,4 +35,15 @@ export function verifyToken(token, secret) {
   } catch {
     return null;
   }
+}
+
+// Recovery code: email ke bina password wapas pane ka tareeka. Signup par ek baar dikhta hai.
+// Aise akshar chune hain jo galat padhe nahi jaate (0/O, 1/I nahi).
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export function makeRecoveryCode() {
+  const group = () => Array.from({ length: 4 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("");
+  return [group(), group(), group(), group(), group()].join("-");
+}
+export function normalizeRecoveryCode(s) {
+  return String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
