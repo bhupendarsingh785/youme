@@ -1358,6 +1358,20 @@ function setupLogin(){
   $("lgOffline").onclick = () => { document.body.classList.remove("auth"); go("home"); };
 }
 
+/* media buttons — delegated (mobile par pakka chalta hai) */
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-media]");
+  if (!b) return;
+  pickedMedia = b.dataset.media;
+  const mp = $("mediaPick");
+  if (mp) mp.textContent = "Chuna: " + pickedMedia;
+  const pb = $("pollBox");
+  if (pb) pb.style.display = b.dataset.media.includes("Poll") ? "block" : "none";
+  b.style.borderColor = "var(--violet)";
+  document.querySelectorAll("[data-media]").forEach(x => { if (x !== b) x.style.borderColor = ""; });
+});
+/* ymMediaDelegate */
+
 /* ---------- bottom sheet ---------- */
 function openSheet(title, items){
   const box = $("sheetBox");
