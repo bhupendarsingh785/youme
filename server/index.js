@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { openDb } from "./db.js";
+import { readdirSync, rmSync } from "node:fs";
+import { openDb, backupTo } from "./db.js";
 import { createApp } from "./app.js";
 
 const env = process.env;
@@ -21,7 +22,26 @@ const server = createApp({
   secret,
   corsOrigin: env.CORS_ORIGIN || "*",
   trustProxy: env.TRUST_PROXY === "1",
+  hsts: env.HSTS === "1",
+  log: true,
 });
+
+// Apne aap backup: BACKUP_DIR set karo. Har BACKUP_EVERY_HOURS (default 24) ghante me, aakhri BACKUP_KEEP (default 7) rakhta hai.
+if (env.BACKUP_DIR) {
+  const every = (Number(env.BACKUP_EVERY_HOURS) || 24) * 3600_000;
+  const keep = Number(env.BACKUP_KEEP) || 7;
+  const runBackup = () => {
+    try {
+      const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
+      backupTo(db, `${env.BACKUP_DIR}/youme-${stamp}.db`);
+      const old = readdirSync(env.BACKUP_DIR).filter((f) => /^youme-.*\.db$/.test(f)).sort().slice(0, -keep);
+      for (const f of old) rmSync(`${env.BACKUP_DIR}/${f}`);
+      console.log("backup ho gaya");
+    } catch (e) { console.error("backup fail:", e.message); }
+  };
+  runBackup();
+  setInterval(runBackup, every).unref();
+}
 
 const port = Number(env.PORT) || 3000;
 server.listen(port, () => console.log(`YouMe server chal raha hai: http://localhost:${port}`));
