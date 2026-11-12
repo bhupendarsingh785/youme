@@ -19,9 +19,9 @@ services:
         value: "data/youme.db"
       - key: TRUST_PROXY
         value: "1"
-      # Google login — value Render dashboard me daalni hai (repo me secret nahi)
+      # Google Client ID public hota hai (secret nahi) — yahan hi rakh diya
       - key: GOOGLE_CLIENT_ID
-        sync: false
+        value: "356143663731-a1qec77dgt1piq1jr3bst72u1b1hldl3.apps.googleusercontent.com"
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       # GitHub login (baad me)
@@ -31,4 +31,4 @@ services:
         sync: false
       # Public URL — callback banane ke liye
       - key: PUBLIC_URL
-        sync: false
+        value: "https://youme-api-yjxc.onrender.com"
