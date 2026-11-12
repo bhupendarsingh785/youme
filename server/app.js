@@ -6,6 +6,7 @@ import {
   hashPassword, verifyPassword, signToken, verifyToken, makeRecoveryCode, normalizeRecoveryCode,
 } from "./auth.js";
 import { rankPosts } from "./feed.js";
+import { registerOAuth } from "./oauth.js";
 
 const PUBLIC_DIR = resolve(fileURLToPath(new URL("../public", import.meta.url)));
 const MIME = {
@@ -21,14 +22,12 @@ const MAX_BODY = 2 * 1024 * 1024;
 const MAX_IMG = 1_500_000;
 const REPORT_REASONS = ["spam", "abuse", "nudity", "violence", "other"];
 const REPORTS_TO_HIDE = 3;           // itne alag logon ke report par post sabse chhup jaata hai
-/* Username ya email — dono account naam ban sakte hain.
-   Username: 3-20 akshar, a-z 0-9 _
-   Email: kuch@kuch.tld (max 120 akshar) */
+/* Username ya email — dono account naam ban sakte hain. */
 const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 function isValidHandle(v) {
-  const s2 = String(v || "").trim();
-  if (EMAIL_RE.test(s2) && s2.length <= 120) return true;
-  return /^[A-Za-z0-9_]{3,20}$/.test(s2);
+  const x = String(v || "").trim();
+  if (EMAIL_RE.test(x) && x.length <= 120) return true;
+  return /^[A-Za-z0-9_]{3,20}$/.test(x);
 }
 
 const LOGIN_FAILS = 8;               // ek username par 15 minute me itni galat koshish ke baad rok
@@ -40,7 +39,7 @@ class HttpError extends Error {
 
 export function createApp({
   db, secret, corsOrigin = "*", rateLimit = true, authLimit = 10, apiLimit = 240,
-  trustProxy = false, hsts = false, log = false,
+  trustProxy = false, hsts = false, log = false, authEnv = {}, production = false, sendMail = null,
 } = {}) {
   if (!db) throw new Error("db chahiye");
   if (!secret) throw new Error("secret chahiye");
@@ -144,7 +143,7 @@ export function createApp({
 
   const today = () => new Date().toISOString().slice(0, 10);
 
-  const publicUser = (u) => ({ id: u.id, username: u.username, display: u.display, coins: u.coins });
+  const publicUser = (u) => ({ id: u.id, username: u.username, display: u.display, coins: u.coins, hasPassword: u.pass_hash !== "!" });
   const publicPost = (r) => ({
     id: r.id, user: { id: r.user_id, username: r.username, display: r.display },
     text: r.text, media: r.media, img: r.img ? `/api/img/${r.id}` : null, createdAt: r.created_at,
@@ -256,7 +255,7 @@ export function createApp({
   route("POST", /^\/api\/password$/, async (req) => {
     const u = auth(req);
     const b = await readJson(req);
-    if (!verifyPassword(String(b.current || ""), u.pass_hash)) throw new HttpError(403, "Abhi ka password galat hai");
+    if (u.pass_hash !== "!" && !verifyPassword(String(b.current || ""), u.pass_hash)) throw new HttpError(403, "Abhi ka password galat hai");
     q.setPassword.run(hashPassword(checkPassword(b.next)), u.recovery_hash, u.id);   // baaki sab device logout
     return { token: newToken(q.userById.get(u.id)) };
   }, { strict: true });
@@ -265,7 +264,7 @@ export function createApp({
   route("POST", /^\/api\/recovery-code$/, async (req) => {
     const u = auth(req);
     const b = await readJson(req);
-    if (!verifyPassword(String(b.password || ""), u.pass_hash)) throw new HttpError(403, "Password galat hai");
+    if (u.pass_hash !== "!" && !verifyPassword(String(b.password || ""), u.pass_hash)) throw new HttpError(403, "Password galat hai");
     const code = makeRecoveryCode();
     q.setRecovery.run(hashPassword(normalizeRecoveryCode(code)), u.id);
     return { recoveryCode: code };
@@ -280,7 +279,7 @@ export function createApp({
   route("POST", /^\/api\/delete-account$/, async (req) => {
     const u = auth(req);
     const b = await readJson(req);
-    if (!verifyPassword(String(b.password || ""), u.pass_hash)) throw new HttpError(403, "Password galat hai");
+    if (u.pass_hash !== "!" && !verifyPassword(String(b.password || ""), u.pass_hash)) throw new HttpError(403, "Password galat hai");
     q.deleteUser.run(u.id);     // posts, likes, replies, DM sab saath me hat jaate hain
     return { ok: true };
   }, { strict: true });
@@ -402,8 +401,6 @@ export function createApp({
 
   // Photo alag se (feed me poori photo nahi bhejte — feed tez rehti hai). <img> header nahi bhej sakta, isliye bina login.
   route("GET", /^\/api\/img\/(\d+)$/, (req, m) => {
-    // <img> tag header nahi bhej sakta — isliye yahan login nahi maangte.
-    // Photo ka id guess karna mushkil hai aur photo public feed ka hissa hai.
     const p = q.postById.get(Number(m[1]));
     const mt = p && p.img && /^data:(image\/(?:jpeg|png|webp));base64,(.*)$/s.exec(p.img);
     if (!mt) throw new HttpError(404, "Photo nahi mili");
@@ -472,6 +469,9 @@ export function createApp({
     return { status: 201, body: { message: { id: Number(lastInsertRowid), mine: true, text, createdAt: now } } };
   });
 
+  // ---------- social + email login ----------
+  registerOAuth({ route, db, env: authEnv, secret, newToken, publicUser, HttpError, readJson, trustProxy, production, sendMail });
+
   // ---------- http ----------
   function headers(extra = {}) {
     return {
@@ -531,6 +531,10 @@ export function createApp({
       if (r.strict && limited("l:" + ip, authLimit)) return sendJson(res, 429, { error: "Bahut koshish — 1 minute baad try karo" });
 
       const out = await r.fn(req, url.pathname.match(r.re), url);
+      if (out && out.redirect) {
+        res.writeHead(302, headers({ Location: out.redirect, "Cache-Control": "no-store", ...(out.cookie ? { "Set-Cookie": out.cookie } : {}) }));
+        return res.end();
+      }
       if (out && out.raw) {
         res.writeHead(200, headers({ "Content-Type": out.type, "Cache-Control": "public, max-age=86400", "Cross-Origin-Resource-Policy": "cross-origin" }));
         return res.end(out.raw);
