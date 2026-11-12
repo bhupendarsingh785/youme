@@ -273,7 +273,7 @@ test("purana (v1) database khulte hi naye tables ke saath upgrade hota hai, data
       CREATE TABLE affinity (user_id INTEGER NOT NULL, author_id INTEGER NOT NULL, score REAL NOT NULL, PRIMARY KEY (user_id, author_id));`);
     old.close();
     const up = openDb(file);
-    assert.equal(up.prepare("PRAGMA user_version").get().user_version, 4);
+    assert.equal(up.prepare("PRAGMA user_version").get().user_version, 6);
     assert.equal(up.prepare("SELECT coins FROM users WHERE username = 'purana'").get().coins, 42);
     for (const t of ["blocks", "reports", "messages", "reward_log"]) assert.ok(up.prepare("SELECT 1 FROM sqlite_master WHERE name = ?").get(t), t);
     up.close();
