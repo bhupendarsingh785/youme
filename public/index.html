@@ -1122,7 +1122,20 @@ paintStories(); paintFeed(); paintReels(); paintProfile();
    to login + feed + post + like + reply server se chalte hain.
    Warna (file se / static hosting se) purana "sirf is phone me" mode chalta hai. */
 let SERVER = false, ME = null;
-const API_BASE = (function(){ try{ return localStorage.getItem("ym.api") || ""; }catch(e){ return ""; } })();
+const API_BASE = (function(){
+  // ?api=https://... se badal sakte ho (ya localStorage me ym.api)
+  try{
+    const q = new URLSearchParams(location.search).get("api");
+    if (q){ localStorage.setItem("ym.api", q.replace(/\/$/, "")); }
+  }catch(e){}
+  try{ const s = localStorage.getItem("ym.api"); if (s) return s.replace(/\/$/, ""); }catch(e){}
+  const h = location.hostname;
+  // GitHub Pages / file: par backend alag host par chalta hai
+  if (location.protocol === "file:" || /github\.io$/i.test(h) || /^127\./.test(h)) {
+    return "https://youme-api.onrender.com";
+  }
+  return "";   // apne hi server par khula hai (same origin)
+})();
 let TOKEN = (function(){ try{ return localStorage.getItem("ym.token") || ""; }catch(e){ return ""; } })();
 
 async function api(method, path, body){
