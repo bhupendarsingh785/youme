@@ -24,6 +24,8 @@ const server = createApp({
   trustProxy: env.TRUST_PROXY === "1",
   hsts: env.HSTS === "1",
   log: true,
+  authEnv: env,
+  production,
 });
 
 // Apne aap backup: BACKUP_DIR set karo. Har BACKUP_EVERY_HOURS (default 24) ghante me, aakhri BACKUP_KEEP (default 7) rakhta hai.
