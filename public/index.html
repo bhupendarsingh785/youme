@@ -476,7 +476,7 @@ function paintFeed(){
     <article class="post">
       <div class="phead"><div class="av">${p.a}</div><div><b>${esc(p.u)}</b><br><span>${esc(p.ts ? ago(p.ts) : p.t)}${why ? " · 💡 " + esc(why) : ""}</span></div></div>
       <div class="ptext">${esc(p.text)}</div>
-      ${p.img ? `<img src="${esc(p.img)}" loading="lazy" style="width:100%;display:block" alt="" />` : (p.media ? `<div class="pmedia">${esc(p.media)}</div>` : "")}
+      ${p.img ? `<img src="${esc(imgUrl(p.img))}" loading="lazy" style="width:100%;display:block" alt="" />` : (p.media ? `<div class="pmedia">${esc(p.media)}</div>` : "")}
       <div class="pacts">
         <button data-like="${i}" class="${p.liked ? "liked" : ""}">${p.liked ? "❤️" : "🤍"} ${p.likes || 0}</button>
         <button data-thread="${i}">💬 ${p.replyCount ?? (p.replies || []).length}</button>
@@ -628,6 +628,14 @@ $("clearBtn").onclick = () => {
   posts = SEED_POSTS.slice(); coins = 0;
   paintFeed(); paintProfile(); toast("Saaf ho gaya");
 };
+
+function imgUrl(u){
+  if (!u) return "";
+  const s2 = String(u);
+  if (/^https?:|^data:|^blob:/.test(s2)) return s2;      // poora URL / data URL
+  if (s2.startsWith("/api/")) return (API_BASE || "") + s2;  // backend alag host par hai
+  return s2;
+}
 
 function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
@@ -1061,7 +1069,7 @@ function paintThread(){
     <div class="post" style="border:1px solid var(--line);border-radius:14px;margin-bottom:14px">
       <div class="phead"><div class="av">${p.a}</div><div><b>${esc(p.u)}</b><br><span>${esc(p.ts ? ago(p.ts) : p.t)}</span></div></div>
       <div class="ptext">${esc(p.text)}</div>
-      ${p.img ? `<img src="${esc(p.img)}" style="width:100%;display:block" alt="" />` : ""}
+      ${p.img ? `<img src="${esc(imgUrl(p.img))}" style="width:100%;display:block" alt="" />` : ""}
     </div>
     <div class="note" style="margin-bottom:8px">${replies.length} jawab</div>
     ${replies.map(r => `
