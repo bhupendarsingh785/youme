@@ -89,6 +89,11 @@ const MIGRATIONS = [
     PRIMARY KEY (user_id, day, kind)
   );
   `,
+  // 4: feed tez — likes ginti aur block jaanch ke liye index
+  `
+  CREATE INDEX IF NOT EXISTS likes_post ON likes(post_id);
+  CREATE INDEX IF NOT EXISTS blocks_blocked ON blocks(blocked_id);
+  `,
 ];
 
 export function openDb(file = ":memory:") {
