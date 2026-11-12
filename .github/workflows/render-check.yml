@@ -17,7 +17,9 @@ jobs:
           SID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
           set -uo pipefail
-          if [ -z "${RK:-}" ] || [ -z "${SID:-}" ]; then
+          RK="$(printf '%s' "${RK:-}" | tr -d '[:space:]')"
+          SID="$(printf '%s' "${SID:-}" | tr -d '[:space:]')"
+          if [ -z "$RK" ] || [ -z "$SID" ]; then
             echo "::error::RENDER_API_KEY ya RENDER_SERVICE_ID secret nahi hai"; exit 1
           fi
           CODE=$(curl -sS -o /tmp/env.json -w '%{http_code}' \
