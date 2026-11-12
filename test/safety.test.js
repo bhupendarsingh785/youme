@@ -60,7 +60,7 @@ test("recovery code: password wapas milta hai, purana code aur purane token beka
 
 test("password badlo: baaki device logout, naya token chalta hai", async () => {
   const u = await mk("pw");
-  assert.equal((await api("/api/password", { method: "POST", token: u.token, body: { current: "galat!", next: "brandnew1" } })).status, 401);
+  assert.equal((await api("/api/password", { method: "POST", token: u.token, body: { current: "galat!", next: "brandnew1" } })).status, 403);
   assert.equal((await api("/api/password", { method: "POST", token: u.token, body: { current: "secret123", next: "123" } })).status, 400);
   const ok = await api("/api/password", { method: "POST", token: u.token, body: { current: "secret123", next: "brandnew1" } });
   assert.equal(ok.status, 200);
@@ -76,7 +76,7 @@ test("logout-all purane token band karta hai", async () => {
 
 test("naya recovery code (puraane account ke liye) password maangta hai", async () => {
   const u = await mk("nrc");
-  assert.equal((await api("/api/recovery-code", { method: "POST", token: u.token, body: { password: "galat" } })).status, 401);
+  assert.equal((await api("/api/recovery-code", { method: "POST", token: u.token, body: { password: "galat" } })).status, 403);
   const r = await api("/api/recovery-code", { method: "POST", token: u.token, body: { password: "secret123" } });
   assert.equal(r.status, 200);
   const ok = await api("/api/recover", { method: "POST", body: { username: u.username, recoveryCode: r.json.recoveryCode, newPassword: "another99" } });
@@ -86,7 +86,7 @@ test("naya recovery code (puraane account ke liye) password maangta hai", async 
 test("account delete: sab saaf, login band", async () => {
   const u = await mk("del");
   const p = await post(u);
-  assert.equal((await api("/api/delete-account", { method: "POST", token: u.token, body: { password: "galat" } })).status, 401);
+  assert.equal((await api("/api/delete-account", { method: "POST", token: u.token, body: { password: "galat" } })).status, 403);
   assert.equal((await api("/api/delete-account", { method: "POST", token: u.token, body: { password: "secret123" } })).status, 200);
   assert.equal((await api("/api/login", { method: "POST", body: { username: u.username, password: "secret123" } })).status, 401);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM posts WHERE id = ?").get(p.id).n, 0);
@@ -273,7 +273,7 @@ test("purana (v1) database khulte hi naye tables ke saath upgrade hota hai, data
       CREATE TABLE affinity (user_id INTEGER NOT NULL, author_id INTEGER NOT NULL, score REAL NOT NULL, PRIMARY KEY (user_id, author_id));`);
     old.close();
     const up = openDb(file);
-    assert.equal(up.prepare("PRAGMA user_version").get().user_version, 3);
+    assert.equal(up.prepare("PRAGMA user_version").get().user_version, 4);
     assert.equal(up.prepare("SELECT coins FROM users WHERE username = 'purana'").get().coins, 42);
     for (const t of ["blocks", "reports", "messages", "reward_log"]) assert.ok(up.prepare("SELECT 1 FROM sqlite_master WHERE name = ?").get(t), t);
     up.close();
