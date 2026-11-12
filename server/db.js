@@ -94,6 +94,35 @@ const MIGRATIONS = [
   CREATE INDEX IF NOT EXISTS likes_post ON likes(post_id);
   CREATE INDEX IF NOT EXISTS blocks_blocked ON blocks(blocked_id);
   `,
+  // 5: social login (Google, Apple, WeChat...) + email code login
+  `
+  CREATE TABLE identities (
+    provider   TEXT NOT NULL,
+    subject    TEXT NOT NULL,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email      TEXT,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (provider, subject)
+  );
+  CREATE INDEX identities_user ON identities(user_id);
+  CREATE INDEX identities_email ON identities(email);
+  CREATE TABLE email_codes (
+    email      TEXT PRIMARY KEY,
+    code_hash  TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    sent_at    INTEGER NOT NULL,
+    tries      INTEGER NOT NULL DEFAULT 0
+  );
+  `,
+  // 6: login ki limits (email spam, naye account) — restart ke baad bhi yaad
+  `
+  CREATE TABLE auth_counters (
+    key      TEXT PRIMARY KEY,
+    n        INTEGER NOT NULL,
+    reset_at INTEGER NOT NULL
+  );
+  CREATE INDEX email_codes_exp ON email_codes(expires_at);
+  `,
 ];
 
 export function openDb(file = ":memory:") {
