@@ -1,0 +1,21 @@
+# Render par ek click deploy — Blueprint
+services:
+  - type: web
+    name: youme-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "https://bhupendarsingh785.github.io"
+      - key: DB_PATH
+        value: "data/youme.db"
+      - key: TRUST_PROXY
+        value: "1"
