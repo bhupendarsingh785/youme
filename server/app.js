@@ -121,22 +121,23 @@ export function createApp({
     return h.n > max;
   }
   const fails = new Map();
-  const failCheck = (name) => { const f = fails.get(name.toLowerCase()); return !!(rateLimit && f && f.reset > Date.now() && f.n >= LOGIN_FAILS); };
-  const failAdd = (name) => {
-    const k = name.toLowerCase(), now = Date.now();
+  const failKey = (name, ip) => name.toLowerCase() + "|" + (ip || "?");
+  const failCheck = (name, ip) => { const f = fails.get(failKey(name, ip)); return !!(rateLimit && f && f.reset > Date.now() && f.n >= LOGIN_FAILS); };
+  const failAdd = (name, ip) => {
+    const k = failKey(name, ip), now = Date.now();
     let f = fails.get(k);
     if (!f || f.reset < now) { f = { n: 0, reset: now + 15 * 60_000 }; fails.set(k, f); }
     f.n++;
     if (fails.size > 5000) for (const [kk, v] of fails) if (v.reset < now) fails.delete(kk);
   };
-  const failClear = (name) => fails.delete(name.toLowerCase());
+  const failClear = (name, ip) => fails.delete(failKey(name, ip));
 
   const today = () => new Date().toISOString().slice(0, 10);
 
   const publicUser = (u) => ({ id: u.id, username: u.username, display: u.display, coins: u.coins });
   const publicPost = (r) => ({
     id: r.id, user: { id: r.user_id, username: r.username, display: r.display },
-    text: r.text, media: r.media, img: r.img || null, createdAt: r.created_at,
+    text: r.text, media: r.media, img: r.img ? `/api/img/${r.id}` : null, createdAt: r.created_at,
     likes: r.likes, replies: r.replies, liked: !!r.liked, ...(r.why ? { why: r.why } : {}),
   });
   const newToken = (u) => signToken({ uid: u.id, tv: u.token_version }, secret);
@@ -217,12 +218,12 @@ export function createApp({
   route("POST", /^\/api\/login$/, async (req) => {
     const b = await readJson(req);
     const name = String(b.username || "").trim();
-    if (failCheck(name)) throw new HttpError(429, "Is account par bahut galat koshish — 15 minute baad try karo");
+    if (failCheck(name, req._ip)) throw new HttpError(429, "Is account par bahut galat koshish — 15 minute baad try karo");
     const u = q.userByName.get(name);
     // user na mile tab bhi hash chalao, taaki time se pata na chale ki username hai ya nahi
     const ok = verifyPassword(String(b.password || ""), u ? u.pass_hash : DUMMY_HASH);
-    if (!u || !ok) { failAdd(name); throw new HttpError(401, "Username ya password galat hai"); }
-    failClear(name);
+    if (!u || !ok) { failAdd(name, req._ip); throw new HttpError(401, "Username ya password galat hai"); }
+    failClear(name, req._ip);
     return { token: newToken(u), user: publicUser(u), hasRecovery: !!u.recovery_hash };
   }, { strict: true });
 
@@ -231,11 +232,11 @@ export function createApp({
     const b = await readJson(req);
     const name = String(b.username || "").trim();
     const next = checkPassword(b.newPassword);
-    if (failCheck(name)) throw new HttpError(429, "Bahut galat koshish — 15 minute baad try karo");
+    if (failCheck(name, req._ip)) throw new HttpError(429, "Bahut galat koshish — 15 minute baad try karo");
     const u = q.userByName.get(name);
     const ok = verifyPassword(normalizeRecoveryCode(b.recoveryCode), u && u.recovery_hash ? u.recovery_hash : DUMMY_HASH);
-    if (!u || !u.recovery_hash || !ok) { failAdd(name); throw new HttpError(401, "Username ya recovery code galat hai"); }
-    failClear(name);
+    if (!u || !u.recovery_hash || !ok) { failAdd(name, req._ip); throw new HttpError(401, "Username ya recovery code galat hai"); }
+    failClear(name, req._ip);
     const code = makeRecoveryCode();      // purana code ek hi baar chalta hai — naya milta hai
     q.setPassword.run(hashPassword(next), hashPassword(normalizeRecoveryCode(code)), u.id);
     const fresh = q.userById.get(u.id);
@@ -245,7 +246,7 @@ export function createApp({
   route("POST", /^\/api\/password$/, async (req) => {
     const u = auth(req);
     const b = await readJson(req);
-    if (!verifyPassword(String(b.current || ""), u.pass_hash)) throw new HttpError(401, "Abhi ka password galat hai");
+    if (!verifyPassword(String(b.current || ""), u.pass_hash)) throw new HttpError(403, "Abhi ka password galat hai");
     q.setPassword.run(hashPassword(checkPassword(b.next)), u.recovery_hash, u.id);   // baaki sab device logout
     return { token: newToken(q.userById.get(u.id)) };
   }, { strict: true });
@@ -254,7 +255,7 @@ export function createApp({
   route("POST", /^\/api\/recovery-code$/, async (req) => {
     const u = auth(req);
     const b = await readJson(req);
-    if (!verifyPassword(String(b.password || ""), u.pass_hash)) throw new HttpError(401, "Password galat hai");
+    if (!verifyPassword(String(b.password || ""), u.pass_hash)) throw new HttpError(403, "Password galat hai");
     const code = makeRecoveryCode();
     q.setRecovery.run(hashPassword(normalizeRecoveryCode(code)), u.id);
     return { recoveryCode: code };
@@ -269,7 +270,7 @@ export function createApp({
   route("POST", /^\/api\/delete-account$/, async (req) => {
     const u = auth(req);
     const b = await readJson(req);
-    if (!verifyPassword(String(b.password || ""), u.pass_hash)) throw new HttpError(401, "Password galat hai");
+    if (!verifyPassword(String(b.password || ""), u.pass_hash)) throw new HttpError(403, "Password galat hai");
     q.deleteUser.run(u.id);     // posts, likes, replies, DM sab saath me hat jaate hain
     return { ok: true };
   }, { strict: true });
@@ -302,7 +303,7 @@ export function createApp({
     const media = ["", "📷 Photo", "🎬 Reel", "📊 Poll"].includes(b.media) ? b.media : "";
     let img = null;
     if (b.img != null) {
-      if (typeof b.img !== "string" || !/^data:image\/(jpeg|png|webp);base64,/.test(b.img)) throw new HttpError(400, "Sirf jpeg/png/webp photo");
+      if (typeof b.img !== "string" || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(b.img)) throw new HttpError(400, "Sirf jpeg/png/webp photo");
       if (b.img.length > MAX_IMG) throw new HttpError(413, "Photo bahut badi hai");
       img = b.img;
     }
@@ -387,6 +388,14 @@ export function createApp({
   route("POST", /^\/api\/reset-interests$/, (req) => {
     q.resetAff.run(auth(req).id);
     return { ok: true };
+  });
+
+  // Photo alag se (feed me poori photo nahi bhejte — feed tez rehti hai). <img> header nahi bhej sakta, isliye bina login.
+  route("GET", /^\/api\/img\/(\d+)$/, (req, m) => {
+    const p = q.postById.get(Number(m[1]));
+    const mt = p && p.img && /^data:(image\/(?:jpeg|png|webp));base64,(.*)$/s.exec(p.img);
+    if (!mt) throw new HttpError(404, "Photo nahi mili");
+    return { raw: Buffer.from(mt[2], "base64"), type: mt[1] };
   });
 
   // ---------- block ----------
@@ -499,7 +508,8 @@ export function createApp({
     try {
       const url = new URL(req.url, "http://x");
       path = url.pathname;
-      const ip = (trustProxy && String(req.headers["x-forwarded-for"] || "").split(",")[0].trim()) || req.socket.remoteAddress || "?";
+      const ip = (trustProxy && String(req.headers["x-forwarded-for"] || "").split(",").pop().trim()) || req.socket.remoteAddress || "?";
+      req._ip = ip;
       if (req.method === "OPTIONS") { res.writeHead(204, headers()); return res.end(); }
       if (!url.pathname.startsWith("/api/")) return await serveStatic(req, res, url.pathname);
 
@@ -509,6 +519,10 @@ export function createApp({
       if (r.strict && limited("l:" + ip, authLimit)) return sendJson(res, 429, { error: "Bahut koshish — 1 minute baad try karo" });
 
       const out = await r.fn(req, url.pathname.match(r.re), url);
+      if (out && out.raw) {
+        res.writeHead(200, headers({ "Content-Type": out.type, "Cache-Control": "public, max-age=86400", "Cross-Origin-Resource-Policy": "cross-origin" }));
+        return res.end(out.raw);
+      }
       if (out && out.status) sendJson(res, out.status, out.body); else sendJson(res, 200, out);
     } catch (e) {
       if (e instanceof HttpError) return sendJson(res, e.status, { error: e.message });
