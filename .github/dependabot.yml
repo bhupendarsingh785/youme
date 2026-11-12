@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # CI ke actions apne aap update hote rahein
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
