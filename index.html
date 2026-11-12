@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0f19" />
+<title>YouMe v12</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#070a10" />
+<link rel="icon" href="icon-192.png" />
+<style>
+  :root{
+    --bg:#070a10; --card:#121a26; --card2:#182231; --line:#26324b;
+    --txt:#eef2fb; --dim:#94a3c4;
+    --green:#34d399; --red:#fb7185; --violet:#7c6cf8; --cyan:#22d3ee; --pink:#f472b6;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;
+       overflow:hidden;font-size:15px}
+
+  /* ---------- screens ---------- */
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;padding-bottom:62px}
+  .screen.on{display:flex}
+  .topbar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#0b111a}
+  .topbar h1{font-size:17px;margin:0;font-weight:800}
+  .topbar .dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+  .spacer{flex:1}
+  .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+  /* ---------- bottom nav ---------- */
+  nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#0b111a;border-top:1px solid var(--line);
+      padding-bottom:env(safe-area-inset-bottom);z-index:20}
+  nav button{flex:1;background:transparent;border:0;color:var(--dim);font-family:inherit;font-size:11px;font-weight:700;
+             display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 11px}
+  nav button .ic{font-size:19px}
+  nav button.on{color:var(--txt)}
+  nav button.create .ic{background:linear-gradient(135deg,var(--violet),var(--pink));border-radius:10px;padding:4px 10px;color:#fff}
+
+  /* ---------- stories ---------- */
+  .stories{display:flex;gap:12px;overflow-x:auto;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .story{flex:0 0 auto;width:64px;text-align:center}
+  .story .ring{width:60px;height:60px;border-radius:50%;padding:2.5px;background:linear-gradient(135deg,var(--pink),var(--violet),var(--cyan))}
+  .story .ring .in{width:100%;height:100%;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:22px}
+  .story small{display:block;margin-top:4px;font-size:10.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .story.add .ring{background:var(--line)}
+
+  /* ---------- feed post ---------- */
+  .post{background:var(--card);border-bottom:1px solid var(--line);margin-bottom:8px}
+  .phead{display:flex;align-items:center;gap:9px;padding:11px 13px}
+  .av{width:36px;height:36px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:17px}
+  .phead b{font-size:14px}
+  .phead span{font-size:11.5px;color:var(--dim)}
+  .ptext{padding:0 13px 11px;font-size:14.5px;line-height:1.55;white-space:pre-wrap}
+  .pmedia{background:#0a0f18;display:flex;align-items:center;justify-content:center;font-size:46px;min-height:210px}
+  .pacts{display:flex;gap:18px;padding:10px 13px;font-size:13px;color:var(--dim)}
+  .pacts button{background:transparent;border:0;color:var(--dim);font-family:inherit;font-size:13px;display:flex;align-items:center;gap:5px}
+  .pacts button.liked{color:var(--red)}
+
+  /* ---------- reels ---------- */
+  #reelsScreen{padding-bottom:0}
+  .reels{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;background:#000}
+  .reel{height:100%;scroll-snap-align:start;position:relative;display:flex;align-items:center;justify-content:center;
+        background:linear-gradient(160deg,#1a2440,#0a0f18 60%)}
+  .reel .big{font-size:64px;opacity:.9}
+  .reel .side{position:absolute;right:12px;bottom:96px;display:flex;flex-direction:column;gap:18px;text-align:center}
+  .reel .side button{background:rgba(10,15,24,.55);border:0;color:#fff;border-radius:50%;width:44px;height:44px;font-size:19px}
+  .reel .side small{display:block;font-size:10.5px;color:#dbe6f5;margin-top:3px}
+  .reel .meta{position:absolute;left:14px;bottom:96px;right:80px}
+  .reel .meta b{font-size:14.5px}
+  .reel .meta p{margin:4px 0 0;font-size:12.5px;color:#cfe0f5;line-height:1.5}
+  .reel .filterbar{position:absolute;left:12px;bottom:34px;display:flex;gap:7px;overflow-x:auto;right:12px}
+  .reel .filterbar button{flex:0 0 auto;background:rgba(10,15,24,.6);border:1px solid rgba(255,255,255,.16);color:#fff;
+                          border-radius:20px;padding:7px 12px;font-size:12px;font-family:inherit}
+  .reel .filterbar button.on{background:var(--violet);border-color:var(--violet)}
+
+  /* filters (CSS only — asli AI baad me) */
+  .f-none{}
+  .f-anime{filter:saturate(1.8) contrast(1.15) hue-rotate(-12deg)}
+  .f-cyber{filter:hue-rotate(180deg) saturate(1.6) contrast(1.2)}
+  .f-film{filter:sepia(.35) contrast(1.1) brightness(.95)}
+  .f-noir{filter:grayscale(1) contrast(1.25)}
+
+  /* ---------- create ---------- */
+  .createbox{padding:16px}
+  textarea{width:100%;min-height:130px;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+           border-radius:14px;padding:14px;font-family:inherit;font-size:15px;resize:vertical}
+  .rowbtns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .rowbtns button{flex:1;min-width:100px;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+                  border-radius:12px;padding:12px;font-family:inherit;font-size:13.5px;font-weight:700}
+  .postbtn{width:100%;margin-top:14px;background:linear-gradient(135deg,var(--violet),var(--pink));border:0;color:#fff;
+           border-radius:14px;padding:15px;font-family:inherit;font-size:16px;font-weight:800}
+
+  /* ---------- profile / wallet ---------- */
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px}
+  .stat{display:flex;justify-content:space-around;text-align:center;margin-top:12px}
+  .stat b{display:block;font-size:17px}
+  .stat span{font-size:11.5px;color:var(--dim)}
+  .coin{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .coin:last-child{border-bottom:0}
+  .coin button{background:var(--green);border:0;color:#04170c;border-radius:10px;padding:9px 14px;font-weight:800;font-family:inherit;font-size:13px}
+  .note{color:var(--dim);font-size:12px;line-height:1.6}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;background:#1f2a3d;border:1px solid var(--line);
+         color:var(--txt);padding:10px 16px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;z-index:40}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<section class="screen on" id="homeScreen">
+  <div class="topbar">
+    <h1>YouMe</h1><span class="dot"></span>
+    <div class="spacer"></div>
+    <button id="openDm" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:7px 11px;font-size:13px">💬 DM</button>
+  </div>
+  <div class="scroll">
+    <div class="stories" id="stories"></div>
+    <div id="feed"></div>
+  </div>
+</section>
+
+<!-- ================= REELS ================= -->
+<section class="screen" id="reelsScreen">
+  <div class="reels" id="reels"></div>
+</section>
+
+<!-- ================= CREATE ================= -->
+<section class="screen" id="createScreen">
+  <div class="topbar"><h1>Naya post</h1></div>
+  <div class="scroll">
+    <div class="createbox">
+      <textarea id="postText" placeholder="Kya chal raha hai?"></textarea>
+      <div class="rowbtns">
+        <button data-media="📷 Photo">📷 Photo</button>
+        <button data-media="🎬 Reel">🎬 Reel</button>
+        <button data-media="📊 Poll">📊 Poll</button>
+      </div>
+      <div id="mediaPick" class="note" style="margin-top:10px">Kuch chuna nahi.</div>
+      <div id="pollBox" style="display:none;margin-top:10px">
+        <input id="pollA" placeholder="Option 1" style="width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:12px;font-family:inherit;margin-bottom:8px" />
+        <input id="pollB" placeholder="Option 2" style="width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:12px;font-family:inherit" />
+      </div>
+      <button class="postbtn" id="doPost">Post karo</button>
+      <p class="note" style="margin-top:12px">Ye prototype hai — post sirf tumhare phone me save hota hai, kahin upload nahi hota.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= THREAD (X jaisa) ================= -->
+<section class="screen" id="threadScreen">
+  <div class="topbar">
+    <button id="threadBack" style="background:transparent;border:0;color:var(--txt);font-size:19px">←</button>
+    <h1>Thread</h1>
+  </div>
+  <div class="scroll" id="threadBody" style="padding:12px"></div>
+  <div style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:#0b111a">
+    <input id="threadIn" placeholder="Jawab likho…" style="flex:1;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:20px;padding:12px 14px;font-family:inherit;font-size:14.5px" />
+    <button id="threadSend" style="background:linear-gradient(135deg,var(--violet),var(--pink));border:0;color:#fff;border-radius:50%;width:46px;height:46px;font-size:18px">➤</button>
+  </div>
+</section>
+
+<!-- ================= LENS (camera + face filters) ================= -->
+<section class="screen" id="lensScreen" style="background:#000;padding-bottom:0">
+  <div style="position:relative;flex:1;overflow:hidden">
+    <video id="lensVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+    <canvas id="lensCanvas" style="display:none"></canvas>
+    <div id="arLayer" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
+    <div id="lensStickers" style="position:absolute;inset:0;pointer-events:none"></div>
+
+    <div style="position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px;z-index:6">
+      <button id="lensClose" style="background:rgba(10,15,24,.65);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:8px 14px;font-size:13px">✕</button>
+      <div class="spacer"></div>
+      <button id="lensFlip" style="background:rgba(10,15,24,.65);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:8px 14px;font-size:13px">🔄</button>
+    </div>
+
+    <div id="lensFilters" style="position:absolute;left:0;right:0;bottom:96px;display:flex;gap:8px;overflow-x:auto;padding:0 12px;z-index:6"></div>
+    <div id="arBar" style="position:absolute;left:0;right:0;bottom:148px;display:flex;gap:8px;overflow-x:auto;padding:0 12px;z-index:6"></div>
+    <div id="lensStickerBar" style="position:absolute;left:0;right:0;bottom:52px;display:flex;gap:8px;overflow-x:auto;padding:0 12px;z-index:6"></div>
+
+    <button id="lensShot" style="position:absolute;left:50%;transform:translateX(-50%);bottom:8px;width:66px;height:66px;border-radius:50%;
+            background:#fff;border:5px solid rgba(255,255,255,.4);z-index:7"></button>
+  </div>
+</section>
+
+<!-- ================= STORY VIEWER ================= -->
+<section class="screen" id="storyScreen" style="background:#000;padding-bottom:0">
+  <div style="position:absolute;top:0;left:0;right:0;display:flex;gap:5px;padding:10px;z-index:5" id="storyBars"></div>
+  <div style="position:absolute;top:34px;left:14px;right:14px;display:flex;align-items:center;gap:9px;z-index:5">
+    <div class="av" id="storyAv">🟢</div>
+    <b id="storyName" style="font-size:14px">YouMe</b>
+    <div class="spacer"></div>
+    <button id="storyClose" style="background:transparent;border:0;color:#fff;font-size:20px">✕</button>
+  </div>
+  <div id="storyBody" style="height:100%;display:flex;align-items:center;justify-content:center;font-size:90px"></div>
+  <div id="storyCap" style="position:absolute;bottom:40px;left:20px;right:20px;color:#fff;font-size:15px;text-align:center"></div>
+</section>
+
+<!-- ================= DM ================= -->
+<section class="screen" id="dmScreen">
+  <div class="topbar">
+    <h1 style="display:flex;align-items:center;gap:6px">Swag <span style="font-size:11px;color:var(--dim)">▾</span></h1>
+    <div class="spacer"></div>
+    <button id="dmNew" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:7px 11px;font-size:15px">✎</button>
+  </div>
+  <div style="padding:10px 12px 4px">
+    <input id="dmSearch" placeholder="🔍 Search" style="width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:11px 14px;font-family:inherit;font-size:14px" />
+  </div>
+  <div class="scroll" id="dmList"></div>
+</section>
+
+<!-- ================= CHAT ================= -->
+<section class="screen" id="chatScreen">
+  <div class="topbar">
+    <button id="chatBack" style="background:transparent;border:0;color:var(--txt);font-size:19px">←</button>
+    <div class="av" id="chatAv" style="width:30px;height:30px;font-size:15px">🟢</div>
+    <h1 id="chatTitle" style="font-size:15px">Chat</h1>
+    <div class="spacer"></div>
+    <span style="font-size:15px;color:var(--dim)">📞</span>
+    <span style="font-size:15px;color:var(--dim);margin-left:12px">🎥</span>
+  </div>
+  <div class="scroll" id="chatBody" style="padding:12px"></div>
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:#0b111a">
+    <button style="background:transparent;border:0;color:var(--dim);font-size:19px">📷</button>
+    <input id="chatIn" placeholder="Message…" style="flex:1;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:20px;padding:12px 14px;font-family:inherit;font-size:14.5px" />
+    <button style="background:transparent;border:0;color:var(--dim);font-size:18px">😊</button>
+    <button id="chatSend" style="background:linear-gradient(135deg,var(--violet),var(--pink));border:0;color:#fff;border-radius:50%;width:42px;height:42px;font-size:16px">➤</button>
+  </div>
+</section>
+
+<!-- ================= ALERTS ================= -->
+<section class="screen" id="alertsScreen">
+  <div class="topbar"><h1>Alerts</h1></div>
+  <div class="scroll" id="alerts"></div>
+</section>
+
+<!-- ================= PROFILE ================= -->
+<section class="screen" id="profileScreen">
+  <div class="topbar"><h1>Profile</h1></div>
+  <div class="scroll">
+    <div class="pcard">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="av" style="width:58px;height:58px;font-size:26px">🧑</div>
+        <div>
+          <b style="font-size:16px">Swag</b>
+          <div class="note">@bhupendarsingh785</div>
+        </div>
+      </div>
+      <div class="stat">
+        <div><b id="stPosts">0</b><span>posts</span></div>
+        <div><b>0</b><span>followers</span></div>
+        <div><b>0</b><span>following</span></div>
+      </div>
+    </div>
+
+    <div class="pcard">
+      <b style="font-size:14px">💰 Wallet (demo)</b>
+      <div class="coin"><span>YouMe Coins</span><b id="coins">0</b></div>
+      <div class="coin"><span>Tip bhejo (demo)</span><button id="tipBtn">+10 coins</button></div>
+      <div class="coin"><span>Subscription (demo)</span><button id="subBtn" style="background:var(--violet);color:#fff">₹99/mo</button></div>
+      <p class="note" style="margin-top:10px">Asli paisa abhi juda nahi. Razorpay/UPI baad me — PhonePe Appstore par commission 0% hai.</p>
+    </div>
+
+    <div class="pcard">
+      <b style="font-size:14px">⚙️ Settings</b>
+      <div class="coin"><span>Auto-translate DM</span><button id="trBtn" style="background:var(--card2);color:var(--txt)">on</button></div>
+      <div class="coin"><span>Data saaf karo</span><button id="clearBtn" style="background:var(--red);color:#fff">clear</button></div>
+    </div>
+  </div>
+</section>
+
+<nav>
+  <button data-s="home" class="on"><span class="ic">🏠</span>Home</button>
+  <button data-s="reels"><span class="ic">🎬</span>Reels</button>
+  <button data-s="create" class="create"><span class="ic">＋</span>Create</button>
+  <button data-s="dm"><span class="ic">💬</span>Inbox</button>
+  <button data-s="alerts"><span class="ic">🔔</span>Alerts</button>
+  <button data-s="profile"><span class="ic">🧑</span>Profile</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* Asli face tracking — MediaPipe FaceMesh (browser me chalta hai, CDN se) */
+window.YM_FACE = { ready:false, mesh:null };
+try{
+  const vision = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+  const fileset = await vision.FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  const mesh = await vision.FaceLandmarker.createFromOptions(fileset, {
+    baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task" },
+    runningMode: "VIDEO",
+    numFaces: 1,
+  });
+  window.YM_FACE.mesh = mesh;
+  window.YM_FACE.ready = true;
+}catch(e){ window.YM_FACE.error = String(e && e.message || e); }
+</script>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem("ss." + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("ss." + k, JSON.stringify(v)); }catch(e){} }
+};
+function toast(m){ const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove("on"), 1800); }
+
+/* ---------- nav ---------- */
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => go(b.dataset.s));
+function go(s){
+  document.querySelectorAll(".screen").forEach(x => x.classList.toggle("on", x.id === s + "Screen"));
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x.dataset.s === s));
+  if (s === "profile") paintProfile();
+  if (s === "alerts") paintAlerts();
+  if (s === "dm") paintDm();
+}
+
+/* ---------- seed data ---------- */
+const SEED_POSTS = [
+  { u:"YouMe", a:"🟡", t:"2m", text:"Naya reel upload hua — dekh lo 👀", media:"", likes:12 },
+  { u:"Swag", a:"🧑", t:"18m", text:"Naya reel banaya — AI filter se. Dekho kaise lagta hai.", media:"🎬", likes:34 },
+  { u:"Riya", a:"🌸", t:"1h", text:"Aaj ka best clip — share kar rahi hoon", media:"🎬", likes:58 },
+];
+const SEED_STORIES = [
+  { n:"Tum", a:"🧑", add:true },
+  { n:"YouMe", a:"🟡" }, { n:"Swag", a:"🧑" }, { n:"Riya", a:"🌸" }, { n:"Aman", a:"🎧" }
+];
+const SEED_REELS = [
+  { a:"🎬", u:"@swag", cap:"AI filter — cyberpunk look", likes:120 },
+  { a:"🌄", u:"@seetal", cap:"Subah ka system check", likes:88 },
+  { a:"📈", u:"@trader", cap:"Nifty ka opening range", likes:210 },
+];
+
+let posts = LS.get("posts", SEED_POSTS);
+let coins = LS.get("coins", 0);
+
+/* ---------- paint ---------- */
+function paintStories(){
+  $("stories").innerHTML = SEED_STORIES.map(s =>
+    `<div class="story${s.add ? " add" : ""}"><div class="ring"><div class="in">${s.add ? "＋" : s.a}</div></div><small>${s.n}</small></div>`
+  ).join("");
+}
+
+function paintFeed(){
+  $("feed").innerHTML = posts.map((p, i) => `
+    <article class="post">
+      <div class="phead"><div class="av">${p.a}</div><div><b>${esc(p.u)}</b><br><span>${esc(p.t)}</span></div></div>
+      <div class="ptext">${esc(p.text)}</div>
+      ${p.img ? `<img src="${p.img}" style="width:100%;display:block" alt="" />` : (p.media ? `<div class="pmedia">${p.media}</div>` : "")}
+      <div class="pacts">
+        <button data-like="${i}" class="${p.liked ? "liked" : ""}">${p.liked ? "❤️" : "🤍"} ${p.likes || 0}</button>
+        <button data-thread="${i}">💬 ${(p.replies || []).length}</button>
+        <button data-share="${i}">↗️ Share</button>
+      </div>
+    </article>`).join("") || `<p class="note" style="padding:16px">Koi post nahi — Create tab se pehla post banao.</p>`;
+
+  $("feed").querySelectorAll("[data-thread]").forEach(b => b.onclick = () => openThread(Number(b.dataset.thread)));
+  $("feed").querySelectorAll("[data-share]").forEach(b => b.onclick = () => sharePost(Number(b.dataset.share)));
+  $("feed").querySelectorAll("[data-like]").forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.like);
+    posts[i].liked = !posts[i].liked;
+    posts[i].likes = Math.max(0, (posts[i].likes || 0) + (posts[i].liked ? 1 : -1));
+    // sirf yahi button badlo — poora feed dobara nahi banta (tez + smooth)
+    b.classList.toggle("liked", posts[i].liked);
+    b.innerHTML = (posts[i].liked ? "❤️" : "🤍") + " " + posts[i].likes;
+    if (posts[i].liked) { b.animate?.([{transform:"scale(1)"},{transform:"scale(1.25)"},{transform:"scale(1)"}], {duration:220}); }
+    LS.set("posts", posts);
+  });
+}
+
+let currentFilter = "none";
+document.addEventListener("click", (e) => { if (e.target.id === "openLens") openLens(); });
+
+function paintReels(){
+  $("reels").innerHTML = SEED_REELS.map((r, i) => `
+    <div class="reel">
+      <div class="big f-${currentFilter}" id="big${i}">${r.a}</div>
+      <div class="side">
+        <div><button data-like="${i}">🤍</button><small>${r.likes}</small></div>
+        <div><button data-rcomment="${i}">💬</button><small>${(SEED_REELS[i] && SEED_REELS[i].comments) || 12}</small></div>
+        <div><button>↗️</button><small>share</small></div>
+      </div>
+      <div class="meta"><b>${r.u}</b><p>${esc(r.cap)}</p></div>
+      <div style="position:absolute;top:14px;left:14px;z-index:3">
+        <button id="openLens" style="background:rgba(10,15,24,.6);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:8px 12px;font-size:12px">✨ Lens</button>
+      </div>
+      <div style="position:absolute;top:14px;right:14px;z-index:3">
+        <button class="pickImg" style="background:rgba(10,15,24,.6);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:8px 12px;font-size:12px">📷 Photo lagao</button>
+      </div>
+      <div class="filterbar">
+        ${["none","anime","cyber","film","noir"].map(f =>
+          `<button data-f="${f}" class="${f === currentFilter ? "on" : ""}">${f === "none" ? "Original" : f}</button>`).join("")}
+      </div>
+    </div>`).join("");
+
+  $("reels").querySelectorAll("[data-f]").forEach(b => b.onclick = () => {
+    currentFilter = b.dataset.f;
+    document.querySelectorAll(".reel .big").forEach(el => { el.className = "big"; });
+    if (typeof applyFilter === "function") applyFilter(currentFilter);
+    document.querySelectorAll("[data-f]").forEach(x => x.classList.toggle("on", x.dataset.f === currentFilter));
+    toast("Filter: " + (currentFilter === "none" ? "Original" : currentFilter) + " (CSS demo — asli AI baad me)");
+  });
+
+  $("reels").querySelectorAll("[data-rcomment]").forEach(b => b.onclick = () => {
+    toast("Comments video ke saath — agle step me public feed ke saath aayenge");
+  });
+  $("reels").querySelectorAll(".side [data-like]").forEach(b => b.onclick = () => {
+    b.textContent = b.textContent === "🤍" ? "❤️" : "🤍";
+  });
+
+  // TikTok jaisa: double tap = like (dil udta hai)
+  $("reels").querySelectorAll(".reel").forEach(el => {
+    let lastTap = 0;
+    el.addEventListener("click", (ev) => {
+      if (ev.target.closest(".side") || ev.target.closest(".filterbar") || ev.target.closest("button")) return;
+      const now = Date.now();
+      if (now - lastTap < 300){
+        const heart = document.createElement("div");
+        heart.textContent = "❤️";
+        heart.style.cssText = "position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.4);font-size:74px;pointer-events:none;transition:all .45s ease-out;opacity:.95";
+        el.appendChild(heart);
+        requestAnimationFrame(() => { heart.style.transform = "translate(-50%,-90%) scale(1.3)"; heart.style.opacity = "0"; });
+        setTimeout(() => heart.remove(), 500);
+        const likeBtn = el.querySelector(".side [data-like]");
+        if (likeBtn && likeBtn.textContent === "🤍") likeBtn.textContent = "❤️";
+        if (navigator.vibrate) navigator.vibrate(12);
+      }
+      lastTap = now;
+    });
+  });
+}
+
+function paintAlerts(){
+  const items = [
+    ["❤️","Riya","Tumhara reel pasand kiya","2m"],
+    ["❤️","Swag","Tumhara post pasand kiya","18m"],
+    ["👤","Naya follower","@trader ne follow kiya","1h"],
+  ];
+  $("alerts").innerHTML = items.map(([i,t,s,w]) => `
+    <div class="pcard" style="display:flex;gap:11px;align-items:center;margin:10px 12px">
+      <div class="av">${i}</div>
+      <div style="flex:1"><b style="font-size:13.5px">${t}</b><div class="note">${s}</div></div>
+      <span class="note">${w}</span>
+    </div>`).join("");
+}
+
+function paintProfile(){
+  $("stPosts").textContent = posts.length;
+  $("coins").textContent = coins;
+}
+
+/* ---------- create ---------- */
+let pickedMedia = "";
+document.querySelectorAll("[data-media]").forEach(b => b.onclick = () => {
+  pickedMedia = b.dataset.media;
+  $("mediaPick").textContent = "Chuna: " + pickedMedia;
+});
+
+$("doPost").onclick = () => {
+  const text = $("postText").value.trim();
+  if (!text && !pickedMedia) return toast("Kuch likho ya media chuno");
+  posts.unshift({ u:"Swag", a:"🧑", t:"abhi", text: text || "(media post)", media: pickedMedia, likes:0 });
+  LS.set("posts", posts);
+  $("postText").value = ""; pickedMedia = ""; $("mediaPick").textContent = "Kuch chuna nahi.";
+  paintFeed(); paintProfile(); go("home");
+  toast("Post ho gaya (sirf is phone me)");
+};
+
+/* ---------- wallet demo ---------- */
+$("tipBtn").onclick = () => { coins += 10; LS.set("coins", coins); paintProfile(); toast("+10 coins (demo)"); };
+$("subBtn").onclick = () => toast("Subscription demo — asli payment baad me judega");
+$("trBtn").onclick = () => toast("Auto-translate demo");
+$("clearBtn").onclick = () => {
+  if (!confirm("Sab local data saaf kar dun?")) return;
+  ["posts","coins"].forEach(k => localStorage.removeItem("ss." + k));
+  posts = SEED_POSTS.slice(); coins = 0;
+  paintFeed(); paintProfile(); toast("Saaf ho gaya");
+};
+
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+
+/* ================= DM sub-system ================= */
+const CHATS_SEED = [
+  { id:"seetal", name:"YouMe AI", av:"🤖", last:"Poochho kuch bhi", t:"2m" },
+  { id:"trader", name:"Trader Bot", av:"📈", last:"Nifty 24936.60 · WAIT", t:"18m" },
+  { id:"suno", name:"Suno", av:"🎙️", last:"Bolo, sun rahi hoon", t:"1h" },
+];
+let chats = LS.get("chats", CHATS_SEED);
+let msgs = LS.get("msgs", {
+  seetal: [{ me:false, t:"Sab theek hai. 76 tests pass.", ts:Date.now()-120000 }],
+  trader: [{ me:false, t:"Nifty abhi WAIT par hai, 0.58% door.", ts:Date.now()-900000 }],
+  suno: [{ me:false, t:"Kuch poochhna ho to bolo.", ts:Date.now()-3600000 }],
+});
+let openChat = null;
+
+if ($("openDm")) $("openDm").onclick = () => { paintDm(); go("dm"); };
+if ($("dmSearch")) $("dmSearch").oninput = () => paintDm();
+if ($("dmNew")) $("dmNew").onclick = () => toast("Naya chat — jald aayega");
+if ($("dmBack")) $("dmBack").onclick = () => go("home");
+if ($("chatBack")) $("chatBack").onclick = () => { paintDm(); go("dm"); };
+
+function paintDm(){
+  const q = ($("dmSearch") && $("dmSearch").value || "").toLowerCase().trim();
+  const list = chats.filter(c => !q || c.name.toLowerCase().includes(q) || (c.last || "").toLowerCase().includes(q));
+  $("dmList").innerHTML = list.map(c => `
+    <div data-c="${c.id}" style="display:flex;gap:12px;align-items:center;padding:11px 14px;cursor:pointer">
+      <div style="position:relative">
+        <div class="av" style="width:48px;height:48px;font-size:21px">${c.av}</div>
+        <span style="position:absolute;right:0;bottom:0;width:12px;height:12px;border-radius:50%;
+          background:${c.unread ? "var(--red)" : "var(--green)"};border:2px solid #0b111a"></span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14.5px;font-weight:${c.unread ? "800" : "600"}">${esc(c.name)}</div>
+        <div class="note" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${esc(c.last || "Naya chat")}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="note" style="font-size:11px">${esc(c.t || "")}</div>
+        ${c.unread ? `<div style="margin-top:6px;background:var(--violet);color:#fff;border-radius:10px;font-size:11px;padding:2px 7px;display:inline-block">${c.unread}</div>` : ""}
+      </div>
+    </div>`).join("") || `<p class="note" style="padding:20px 16px">Koi chat nahi mili.</p>`;
+
+  $("dmList").querySelectorAll("[data-c]").forEach(el => el.onclick = () => openChatWith(el.dataset.c));
+}
+
+function openChatWith(id){
+  openChat = id;
+  const c = chats.find(x => x.id === id);
+  if (c){ c.unread = 0; LS.set("chats", chats); }
+  if ($("chatAv") && c) $("chatAv").textContent = c.av;
+  $("chatTitle").textContent = c ? c.name : "Chat";
+  paintChat();
+  go("chat");
+}
+
+function paintChat(){
+  const list = msgs[openChat] || [];
+  $("chatBody").innerHTML = list.map(m => `
+    <div style="display:flex;justify-content:${m.me ? "flex-end" : "flex-start"};margin-bottom:8px">
+      <div style="max-width:78%;background:${m.me ? "linear-gradient(135deg,#7c6cf8,#f472b6)" : "var(--card2)"};
+                  color:#fff;padding:10px 13px;border-radius:${m.me ? "16px 16px 4px 16px" : "16px 16px 16px 4px"};
+                  font-size:14px;line-height:1.5">${esc(m.t)}</div>
+    </div>`).join("") || `<p class="note">Pehla message bhejo.</p>`;
+  $("chatBody").scrollTop = $("chatBody").scrollHeight;
+}
+
+$("chatSend").onclick = () => {
+  const v = $("chatSend") && $("chatIn").value.trim();
+  if (!v) return;
+  msgs[openChat] = msgs[openChat] || [];
+  msgs[openChat].push({ me:true, t:v, ts:Date.now() });
+  $("chatIn").value = "";
+  LS.set("msgs", msgs);
+  paintChat();
+
+  // YouMe AI se jawab
+  const who = openChat;
+  msgs[who].push({ me:false, t:"…", ts:Date.now() });
+  paintChat();
+  smartReply(v, who).then((reply) => {
+    msgs[who].pop();
+    msgs[who].push({ me:false, t:reply, ts:Date.now() });
+    LS.set("msgs", msgs);
+    if (openChat === who) paintChat();
+    const c = chats.find(x => x.id === who);
+    if (c){ c.last = reply; c.t = "abhi"; LS.set("chats", chats); }
+  }).catch(() => { msgs[who].pop(); paintChat(); });
+};
+
+
+/* ---------- YouMe AI (apna, kisi doosre system se nahi) ---------- */
+async function youmeAsk(prompt){
+  const url = "https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai";
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 25000);
+  try{
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error("http " + r.status);
+    const txt = await r.text();
+    return txt && txt.trim().length > 1 ? txt.trim() : "";
+  }catch(e){ return ""; }
+  finally{ clearTimeout(t); }
+}
+
+const YOUME_PROMPT = "Tum YouMe ho — ek dosti wali app. Hinglish (Roman Hindi) me 2-3 line ka pyaar bhara jawab do, aakhir me ek chhota sawal. Sach bolo.";
+
+async function smartReply(text){
+  try{
+    const a = await youmeAsk(YOUME_PROMPT + "\n\nSwag: " + text);
+    if (a && a.length > 1) return String(a).trim().slice(0, 400);
+  }catch(e){}
+  return autoReply(text);
+}
+
+function autoReply(t){
+  const x = t.toLowerCase();
+  if (/kaise|haal/.test(x)) return "Main theek hoon. Tum batao?";
+  if (/market|nifty/.test(x)) return "Nifty abhi WAIT par hai. Trader tab me detail hai.";
+  if (/kya kar/.test(x)) return "Main feed, reels, DM aur wallet sambhalti hoon.";
+  return "Samajh gayi. (Demo jawab — asli AI key jodne par aayega.)";
+}
+
+
+/* ================= STORIES viewer ================= */
+const STORY_DATA = [
+  { n:"Riya", a:"🌸", items:[ {c:"🌸", cap:"Subah ki pehli clip"},{c:"🎬", cap:"Naya reel"},{c:"✨", cap:"Filtter try karo"} ] },
+  { n:"Swag", a:"🧑", items:[ {c:"🎬", cap:"Naya reel banaya"},{c:"🌄", cap:"Subah ki thandi hawa"} ] },
+  { n:"Suno", a:"🎙️", items:[ {c:"🎙️", cap:"Bolo, sun rahi hoon"} ] },
+];
+let sIdx = 0, sItem = 0, sTimer = null;
+
+document.addEventListener("click", (e) => {
+  const st = e.target.closest(".story");
+  if (st && !st.classList.contains("add")){
+    const i = [...document.querySelectorAll(".story")].indexOf(st);
+    openStory(Math.max(0, i - 1));   // pehla 'Tum' add-story hai
+  }
+});
+
+function openStory(i){
+  sIdx = i; sItem = 0;
+  go("story");
+  paintStory();
+}
+function paintStory(){
+  const s = STORY_DATA[sIdx];
+  if (!s){ closeStory(); return; }
+  $("storyAv").textContent = s.a;
+  $("storyName").textContent = s.n;
+  $("storyBars").innerHTML = s.items.map((_, k) =>
+    `<div style="flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.28);overflow:hidden">
+       <div style="height:100%;width:${k < sItem ? 100 : 0}%;background:#fff;transition:width 3s linear" data-bar="${k}"></div>
+     </div>`).join("");
+
+  const it = s.items[sItem] || s.items[0];
+  $("storyBody").textContent = it.c;
+  $("storyCap").textContent = it.cap || "";
+
+  const bar = document.querySelector(`[data-bar="${sItem}"]`);
+  if (bar) requestAnimationFrame(() => { bar.style.width = "100%"; });
+
+  clearTimeout(sTimer);
+  sTimer = setTimeout(() => {
+    sItem++;
+    if (sItem >= s.items.length){ sIdx++; sItem = 0; }
+    if (sIdx >= STORY_DATA.length) closeStory(); else paintStory();
+  }, 3000);
+}
+function closeStory(){ clearTimeout(sTimer); go("home"); }
+$("storyClose").onclick = closeStory;
+
+/* ================= POLL post ================= */
+const _oldMedia = document.querySelectorAll("[data-media]");
+_oldMedia.forEach(b => b.addEventListener("click", () => {
+  $("pollBox").style.display = b.dataset.media === "📊 Poll" ? "block" : "none";
+}));
+
+/* ================= REELS: asli photo + canvas filter ================= */
+const FILTERS = {
+  none:   { b:0, c:1, s:1, h:0 },
+  anime:  { b:8, c:1.25, s:1.9, h:-14 },
+  cyber:  { b:0, c:1.2, s:1.6, h:180 },
+  film:   { b:-6, c:1.12, s:1.05, h:0, sepia:.35 },
+  noir:   { b:0, c:1.3, s:0, h:0 },
+};
+
+document.addEventListener("change", (e) => {
+  if (e.target.id !== "reelImg") return;
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  const reels = document.querySelectorAll(".reel .big");
+  reels.forEach(el => {
+    el.textContent = "";
+    el.style.backgroundImage = `url(${url})`;
+    el.style.backgroundSize = "cover";
+    el.style.backgroundPosition = "center";
+    el.style.width = "100%"; el.style.height = "100%";
+    el.style.fontSize = "0";
+  });
+  applyFilter(currentFilter);
+  toast("Photo lagi — filter try karo");
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.classList.contains("pickImg")) return;
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "image/*"; inp.id = "reelImg";
+  inp.style.display = "none";
+  document.body.appendChild(inp);
+  inp.click();
+});
+
+function applyFilter(name){
+  const f = FILTERS[name] || FILTERS.none;
+  const parts = [];
+  if (f.s === 0) parts.push("grayscale(1)"); else parts.push(`saturate(${f.s})`);
+  parts.push(`contrast(${f.c})`);
+  parts.push(`brightness(${1 + f.b/100})`);
+  if (f.h) parts.push(`hue-rotate(${f.h}deg)`);
+  if (f.sepia) parts.push(`sepia(${f.sepia})`);
+  document.querySelectorAll(".reel .big").forEach(el => { el.style.filter = parts.join(" "); });
+}
+
+
+/* ================= LENS: camera + beauty/face filters + stickers ================= */
+const LENS_FILTERS = [
+  { id:"original", name:"Original", css:"" },
+  { id:"glow",     name:"Glow",     css:"brightness(1.12) saturate(1.15) contrast(1.05)" },
+  { id:"soft",     name:"Soft",     css:"brightness(1.08) saturate(1.05) blur(0.4px)" },
+  { id:"warm",     name:"Warm",     css:"sepia(.22) saturate(1.25) brightness(1.05)" },
+  { id:"cool",     name:"Cool",     css:"hue-rotate(-12deg) saturate(1.15) brightness(1.02)" },
+  { id:"vintage",  name:"Vintage",  css:"sepia(.42) contrast(.95) brightness(1.05)" },
+  { id:"noir",     name:"Noir",     css:"grayscale(1) contrast(1.25)" },
+  { id:"cyber",    name:"Cyber",    css:"hue-rotate(190deg) saturate(1.7) contrast(1.15)" },
+  { id:"anime",    name:"Anime",    css:"saturate(1.9) contrast(1.2) brightness(1.05)" },
+  { id:"vhs",      name:"VHS",      css:"contrast(1.2) saturate(1.3) hue-rotate(-8deg) blur(0.3px)" },
+  { id:"duotone",  name:"Duotone",  css:"grayscale(1) sepia(.6) hue-rotate(180deg) saturate(1.8)" },
+  { id:"dream",    name:"Dream",    css:"brightness(1.15) saturate(1.1) blur(0.6px) contrast(.95)" },
+];
+const STICKERS = ["😎","😍","🎉","🔥","💖","🌟","🦋","👑","🎧","🌈","🌸","😂"];
+
+let lensStream = null, lensFilter = LENS_FILTERS[0], lensFacing = "user", activeStickers = [];
+
+function openLens(){
+  go("lens");
+  paintLensBars();
+  startLens();
+  setTimeout(() => { if (typeof startAr === "function") startAr(); }, 400);
+}
+
+function paintLensBars(){
+  $("lensFilters").innerHTML = LENS_FILTERS.map(f =>
+    `<button data-lf="${f.id}" style="flex:0 0 auto;background:${f.id === lensFilter.id ? "var(--violet)" : "rgba(10,15,24,.6)"};
+      border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:8px 13px;font-size:12.5px;font-family:inherit">${f.name}</button>`).join("");
+  $("lensFilters").querySelectorAll("[data-lf]").forEach(b => b.onclick = () => {
+    lensFilter = LENS_FILTERS.find(f => f.id === b.dataset.lf) || LENS_FILTERS[0];
+    applyLensFilter(); paintLensBars();
+  });
+
+  $("lensStickerBar").innerHTML = STICKERS.map(s2 =>
+    `<button data-st="${s2}" style="flex:0 0 auto;background:rgba(10,15,24,.6);border:1px solid rgba(255,255,255,.2);color:#fff;
+      border-radius:50%;width:44px;height:44px;font-size:20px">${s2}</button>`).join("");
+  $("lensStickerBar").querySelectorAll("[data-st]").forEach(b => b.onclick = () => {
+    activeStickers.push({ ch:b.dataset.st, x:30 + Math.random()*40, y:25 + Math.random()*40, size:46 });
+    paintStickers();
+  });
+}
+
+function applyLensFilter(){ $("lensVideo").style.filter = lensFilter.css || "none"; }
+
+function paintStickers(){
+  $("lensStickers").innerHTML = activeStickers.map((s2, i) =>
+    `<span data-rm="${i}" style="position:absolute;left:${s2.x}%;top:${s2.y}%;font-size:${s2.size}px;pointer-events:auto">${s2.ch}</span>`).join("");
+  $("lensStickers").querySelectorAll("[data-rm]").forEach(el => el.onclick = () => {
+    activeStickers.splice(Number(el.dataset.rm), 1); paintStickers();
+  });
+}
+
+async function startLens(){
+  try{
+    lensStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: lensFacing }, audio: false });
+    $("lensVideo").srcObject = lensStream;
+    applyLensFilter();
+  }catch(e){
+    toast("Camera nahi khula — permission do ya browser check karo");
+  }
+}
+
+function stopLens(){
+  if (lensStream){ lensStream.getTracks().forEach(t => t.stop()); lensStream = null; }
+  activeStickers = []; paintStickers();
+}
+
+$("lensClose").onclick = () => { if (typeof stopAr === "function") stopAr(); stopLens(); go("reels"); };
+$("lensFlip").onclick = async () => {
+  lensFacing = lensFacing === "user" ? "environment" : "user";
+  stopLens(); await startLens();
+};
+
+$("lensShot").onclick = () => {
+  const v = $("lensVideo"), c = $("lensCanvas");
+  if (!v.videoWidth) return toast("Camera taiyar nahi");
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  const ctx = c.getContext("2d");
+  ctx.filter = lensFilter.css || "none";
+  ctx.drawImage(v, 0, 0, c.width, c.height);
+  activeStickers.forEach(s2 => {
+    ctx.filter = "none";
+    ctx.font = `${Math.round(c.width * (s2.size / 300))}px serif`;
+    ctx.fillText(s2.ch, c.width * s2.x / 100, c.height * s2.y / 100);
+  });
+  const data = c.toDataURL("image/jpeg", 0.85);
+  const cap = prompt("Caption likho (khali chhod sakte ho):") || "";
+  posts.unshift({ u:"Swag", a:"🧑", t:"abhi", text: cap || "(lens photo)", media:"", img: data, likes:0 });
+  LS.set("posts", posts);
+  stopLens();
+  paintFeed(); go("home");
+  toast("Photo post ho gayi (sirf is phone me)");
+};
+
+/* ---------- advanced share ---------- */
+async function sharePost(i){
+  const p = posts[i];
+  const text = `${p.u}: ${p.text}`;
+  try{
+    if (navigator.share){ await navigator.share({ title:"YouMe", text, url: location.href }); return; }
+  }catch(e){}
+  try{ await navigator.clipboard.writeText(text + "\n" + location.href); toast("Copy ho gaya — kahin bhi paste karo"); }
+  catch(e){ toast("Share nahi hua"); }
+}
+
+
+/* ================= AR masks (chehre par) ================= */
+const AR_MASKS = [
+  { id:"none",  name:"Off",       ch:"" },
+  { id:"crown", name:"Crown",     ch:"👑" },
+  { id:"glass", name:"Glasses",   ch:"🕶️" },
+  { id:"dog",   name:"Dog ears",  ch:"🐶" },
+  { id:"bunny", name:"Bunny",     ch:"🐰" },
+  { id:"hearts",name:"Hearts",    ch:"💖" },
+  { id:"halo",  name:"Halo",      ch:"😇" },
+  { id:"fire",  name:"Fire",      ch:"🔥" },
+  { id:"cat",   name:"Cat",       ch:"🐱" },
+  { id:"star",  name:"Star",      ch:"⭐" },
+];
+let arMask = AR_MASKS[0], arRAF = null, arVideo = null;
+
+function paintArBar(){
+  const bar = $("arBar");
+  if (!bar) return;
+  bar.innerHTML = AR_MASKS.map(m =>
+    `<button data-ar="${m.id}" style="flex:0 0 auto;background:${m.id===arMask.id?"var(--violet)":"rgba(10,15,24,.6)"};
+      border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:8px 13px;font-size:12.5px;font-family:inherit">${m.ch || "🚫"} ${m.name}</button>`).join("");
+  bar.querySelectorAll("[data-ar]").forEach(b => b.onclick = () => {
+    arMask = AR_MASKS.find(m => m.id === b.dataset.ar) || AR_MASKS[0];
+    paintArBar();
+    if (arMask.id === "none") clearAr();
+  });
+}
+
+function clearAr(){ if ($("arLayer")) $("arLayer").innerHTML = ""; }
+
+function arLoop(){
+  const v = $("lensVideo"), layer = $("arLayer");
+  if (!v || !layer) return;
+  const F = window.YM_FACE || {};
+
+  if (!F.ready || !F.mesh){
+    // fallback: chehra na mile to mask upar-center me
+    drawArAt(0.5, 0.28, v.clientWidth || 360);
+  } else if (v.readyState >= 2){
+    try{
+      const res = F.mesh.detectForVideo(v, performance.now());
+      const lm = res && res.faceLandmarks && res.faceLandmarks[0];
+      if (lm && lm[10]) drawArAt(lm[10].x, lm[10].y - 0.06, (v.clientWidth || 360));
+      else clearAr();
+    }catch(e){}
+  }
+  arRAF = requestAnimationFrame(arLoop);
+}
+
+function drawArAt(nx, ny, w){
+  const layer = $("arLayer");
+  if (!layer || arMask.id === "none") { if (layer) layer.innerHTML = ""; return; }
+  const size = Math.round(w * 0.22);
+  layer.innerHTML =
+    `<div style="position:absolute;left:${nx*100}%;top:${ny*100}%;transform:translate(-50%,-50%);
+      font-size:${size}px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))">${arMask.ch}</div>`;
+}
+
+function startAr(){
+  stopAr();
+  paintArBar();
+  arLoop();
+}
+function stopAr(){ if (arRAF) cancelAnimationFrame(arRAF); arRAF = null; clearAr(); }
+
+
+/* ================= Thread (X jaisa) ================= */
+let threadIdx = null;
+function openThread(i){
+  threadIdx = i;
+  paintThread();
+  go("thread");
+}
+function paintThread(){
+  const p = posts[threadIdx];
+  if (!p) return;
+  const replies = p.replies || [];
+  $("threadBody").innerHTML = `
+    <div class="post" style="border:1px solid var(--line);border-radius:14px;margin-bottom:14px">
+      <div class="phead"><div class="av">${p.a}</div><div><b>${esc(p.u)}</b><br><span>${esc(p.t)}</span></div></div>
+      <div class="ptext">${esc(p.text)}</div>
+      ${p.img ? `<img src="${p.img}" style="width:100%;display:block" alt="" />` : ""}
+    </div>
+    <div class="note" style="margin-bottom:8px">${replies.length} jawab</div>
+    ${replies.map(r => `
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div class="av">${r.a || "🧑"}</div>
+        <div style="flex:1"><b style="font-size:13px">${esc(r.u || "Swag")}</b>
+          <div style="font-size:14px;margin-top:2px">${esc(r.text)}</div></div>
+      </div>`).join("") || `<p class="note">Pehla jawab likho.</p>`}`;
+}
+$("threadBack").onclick = () => { paintFeed(); go("home"); };
+$("threadSend").onclick = () => {
+  const v = $("threadIn").value.trim();
+  if (!v || threadIdx === null) return;
+  const p = posts[threadIdx];
+  p.replies = p.replies || [];
+  p.replies.push({ u:"Swag", a:"🧑", text:v });
+  $("threadIn").value = "";
+  LS.set("posts", posts);
+  paintThread();
+  toast("Jawab juda");
+};
+
+
+/* ---------- start ---------- */
+paintStories(); paintFeed(); paintReels(); paintProfile();
+</script>
+</body>
+</html>
