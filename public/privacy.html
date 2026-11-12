@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy — YouMe</title><style>
+:root{--bg:#f4f6fb;--txt:#141a2b;--dim:#5b6785;--card:#fff;--line:#d9deea}
+@media (prefers-color-scheme:dark){:root{--bg:#070a10;--txt:#eef2fb;--dim:#94a3c4;--card:#121a26;--line:#26324b}}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.7 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:26px;margin:.2em 0}h2{font-size:19px;margin:1.6em 0 .3em}
+.note{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--dim);font-size:14px}
+a{color:#7c6cf8}li{margin:.3em 0}small{color:var(--dim)}
+</style></head><body><main>
+<p><a href="/">← YouMe par wapas</a></p>
+
+<h1>Privacy — tumhara data</h1>
+<p><small>Aakhri badlav: 12 November 2026</small></p>
+<p class="note">Ye ek shuruaati template hai. App ko public karne se pehle kisi vakil se dikhwa lo aur neeche <b>[apna email]</b> ki jagah asli contact daalo.</p>
+
+<h2>Hum kya rakhte hain</h2>
+<ul>
+<li><b>Account:</b> username, tumhara naam, aur password (sirf scrypt hash ke roop me — asli password hum kabhi nahi dekh sakte). Recovery code bhi sirf hash hota hai.</li>
+<li><b>Tumhara content:</b> post, photo, replies, likes.</li>
+<li><b>Message (DM):</b> tumhare aur samne wale ke beech ke message.</li>
+<li><b>Safety:</b> kisko block kiya, kis post ko report kiya.</li>
+<li><b>Feed ke liye:</b> tum kin creators ke post like/reply/share karte ho, uska ek number. Isse feed tumhari pasand ke hisab se sajti hai. Settings me "Algorithm reset" se ye saaf ho jata hai.</li>
+<li><b>Coins:</b> kitne coins mile (abhi sirf demo, asli paise nahi).</li>
+</ul>
+
+<h2>Hum kya nahi lete</h2>
+<p>Phone number, email, location, contacts — kuch nahi. Is server par koi vigyapan (ads) ya tracker nahi hai.</p>
+
+<h2>Dhyan rakhne wali baatein</h2>
+<ul>
+<li><b>DM end-to-end encrypted nahi hain.</b> Wo server par padhne layak roop me rehte hain, to server chalane wala unhe technically dekh sakta hai. Bahut zaroori ya nijee baat DM me mat bhejo.</li>
+<li><b>"YouMe AI" chat:</b> is chat me jo likhte ho wo jawab banane ke liye bahari seva <b>pollinations.ai</b> ko bheja jaata hai.</li>
+<li><b>Lens / camera:</b> camera tumhare phone me hi chalta hai. Photo tabhi server par jaati hai jab tum "post" dabate ho. Chehra pehchanne wala model <b>jsDelivr</b> aur <b>Google Storage</b> se download hota hai, isliye unhe tumhara IP dikh sakta hai.</li>
+<li>Jis par tum ne chhota data phone me (localStorage) rakha hai, wo sirf tumhare browser me rehta hai.</li>
+</ul>
+
+<h2>Delete aur backup</h2>
+<p>Settings → "Account hamesha ke liye delete" se tumhare post, photo, replies aur message hat jaate hain. Server ke backup me ek purani copy kuch din (shuruaat me 7 din) tak reh sakti hai, phir apne aap mit jaati hai.</p>
+
+<h2>Umr</h2>
+<p>Ye app 18 saal se kam umr ke logon ke liye nahi hai, jab tak mata-pita/guardian ki ijazat na ho.</p>
+
+<h2>Sampark</h2>
+<p>Sawal ya data hatwane ki request: <b>[apna email]</b></p>
+
+</main></body></html>
