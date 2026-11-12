@@ -402,6 +402,8 @@ export function createApp({
 
   // Photo alag se (feed me poori photo nahi bhejte — feed tez rehti hai). <img> header nahi bhej sakta, isliye bina login.
   route("GET", /^\/api\/img\/(\d+)$/, (req, m) => {
+    // <img> tag header nahi bhej sakta — isliye yahan login nahi maangte.
+    // Photo ka id guess karna mushkil hai aur photo public feed ka hissa hai.
     const p = q.postById.get(Number(m[1]));
     const mt = p && p.img && /^data:(image\/(?:jpeg|png|webp));base64,(.*)$/s.exec(p.img);
     if (!mt) throw new HttpError(404, "Photo nahi mili");
@@ -419,7 +421,7 @@ export function createApp({
     return { ok: true };
   });
 
-  route("POST", /^\/api\/users\/([A-Za-z0-9_]{3,20})\/unblock$/, (req, m) => {
+  route("POST", /^\/api\/users\/([A-Za-z0-9._%+@-]{3,120})\/unblock$/, (req, m) => {
     const u = auth(req);
     q.delBlock.run(u.id, userNamed(m[1]).id);
     return { ok: true };
