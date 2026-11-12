@@ -1,15 +1,25 @@
-name: Deploy to GitHub Pages
+name: Deploy frontend to GitHub Pages
+
+# Sirf frontend (public/) Pages par jata hai.
+# Backend (server/) kisi host par chalta hai — Pages par Node server nahi chalta.
+
 on:
   push:
     branches: [main]
+    paths:
+      - "public/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 concurrency:
   group: pages
   cancel-in-progress: true
+
 jobs:
   deploy:
     environment:
@@ -21,6 +31,6 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: ./public
       - id: deployment
         uses: actions/deploy-pages@v4
