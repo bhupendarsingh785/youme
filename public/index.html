@@ -1285,7 +1285,9 @@ function enterServerMode(user){
     try{
       const r = await api("POST", "/api/posts", { text, media:pickedMedia });
       $("postText").value = ""; pickedMedia = ""; $("mediaPick").textContent = "Kuch chuna nahi.";
-      coins = r.coins; go("home");
+      coins = r.coins;
+      if (typeof loadFeed === "function") await loadFeed();   // feed turant refresh
+      go("home");
       toast("Post ho gaya" + (r.earned ? ` · +${r.earned} coins (mehnat ka inaam)` : ""));
     }catch(e){ toast(e.message); }
   };
@@ -1308,6 +1310,7 @@ function enterServerMode(user){
     try{
       const r = await api("POST", "/api/posts", { text: cap || "(lens photo)", img:data });
       coins = r.coins;
+      if (typeof loadFeed === "function") await loadFeed();
       if (typeof stopAr === "function") stopAr();
       stopLens(); go("home");
       toast(`Photo post ho gayi · +${r.earned} coins`);
