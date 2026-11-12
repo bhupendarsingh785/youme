@@ -1299,6 +1299,8 @@ function setupLogin(){
   const submit = async (kind) => {
     const username = $("lgUser").value.trim(), password = $("lgPass").value, display = $("lgName").value.trim();
     if (!username || !password) return msg("Username aur password dono likho", true);
+    if (username.includes("@")) return msg("Username me email nahi chalta — sirf a-z 0-9 _ (jaise swag_123)", true);
+    if (!/^[a-z0-9_]{3,20}$/.test(username)) return msg("Username 3-20 akshar: sirf a-z 0-9 _", true);
     msg("Ruko…");
     try{
       const r = await api("POST", kind === "signup" ? "/api/signup" : "/api/login", { username, password, display });
@@ -1314,6 +1316,38 @@ function setupLogin(){
   $("lgSignup").onclick = () => submit("signup");
   $("lgPass").onkeydown = (e) => { if (e.key === "Enter") submit("login"); };
   $("lgOffline").onclick = () => { document.body.classList.remove("auth"); go("home"); };
+
+  /* ---- username ki live jaanch: email daala to saaf batao aur sudhar do ---- */
+  const okUser = (u) => /^[a-z0-9_]{3,20}$/.test(u);
+  const fromEmail = (v) => (v.split("@")[0] || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+
+  function checkUser(){
+    const el = $("lgUser");
+    const v = el.value.trim();
+    if (!v){ msg(""); return; }
+    if (v.includes("@")){
+      const sug = fromEmail(v);
+      msg("Email nahi — username daalo. Suggestion: " + (sug || "swag") + " (tap karo)", true);
+      el.dataset.sug = sug || "swag";
+      return;
+    }
+    if (!okUser(v)){
+      msg("Username 3-20 akshar, sirf a-z 0-9 _ (bade akshar aur space nahi)", true);
+      return;
+    }
+    el.dataset.sug = "";
+    msg("");
+  }
+
+  $("lgUser").addEventListener("input", checkUser);
+  $("lgUser").addEventListener("blur", checkUser);
+
+  // suggestion par tap karo to username bhar jaye
+  $("loginMsg").style.cursor = "pointer";
+  $("loginMsg").addEventListener("click", () => {
+    const sug = $("lgUser").dataset.sug;
+    if (sug){ $("lgUser").value = sug; $("lgUser").dataset.sug = ""; checkUser(); }
+  });
 }
 
 /* ---------- bottom sheet ---------- */
