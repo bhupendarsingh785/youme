@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" id="themeMeta" content="#070a10" />
-<title>YouMe</title>
+<title>YouMe v12</title>
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <style>
@@ -1518,13 +1518,46 @@ function setupSocial(){
   };
 }
 
+/* ===== AUTO account — login screen kabhi nahi =====
+   Pehli baar: device ka apna account khud ban jata hai (username + password phone me hi rehta hai).
+   User ko kabhi login/naam-password nahi dikhta. */
+function deviceCreds(){
+  try{ return JSON.parse(localStorage.getItem("ym.device") || "null"); }catch(e){ return null; }
+}
+function makeDeviceCreds(){
+  const rnd = Math.random().toString(36).slice(2, 10);
+  const c = { username: "swag_" + rnd, password: "p_" + rnd + "_" + Date.now().toString(36), display: "Swag" };
+  try{ localStorage.setItem("ym.device", JSON.stringify(c)); }catch(e){}
+  return c;
+}
+
+async function autoAuth(){
+  let c = deviceCreds() || makeDeviceCreds();
+  // pehle login try karo
+  try{
+    const r = await api("POST", "/api/login", { username: c.username, password: c.password });
+    if (r && r.token){ saveToken(r.token); enterServerMode(r.user); return true; }
+  }catch(e){}
+  // na chale to naya account
+  try{
+    const r = await api("POST", "/api/signup", { username: c.username, password: c.password, display: c.display });
+    if (r && r.token){ saveToken(r.token); enterServerMode(r.user); return true; }
+  }catch(e){}
+  return false;
+}
+
 (async function boot(){
-  if (!(await backendUp())) return;                 // backend nahi mila → local mode
+  if (!(await backendUp())) return;                 // backend nahi mila → local mode (koi login nahi)
   if (TOKEN){
     try{ const d = await api("GET", "/api/me"); enterServerMode(d.user); return; }
     catch(e){ saveToken(""); }
   }
-  setupLogin();
+  // login screen dikhao hi nahi — chupchaap account bana lo
+  const ok = await autoAuth();
+  if (!ok){
+    // kuch bhi na chale to local mode me chalta rahe
+    toast("Server se jud nahi paya — phone wale mode me chal raha hai");
+  }
 })();
 </script>
 </body>
