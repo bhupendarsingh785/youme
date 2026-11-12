@@ -5,8 +5,11 @@ stages:
 test:
   stage: test
   image: node:22
+  interruptible: true
   script:
     - npm test
+    - DB_PATH=/tmp/smoke.db node --disable-warning=ExperimentalWarning -e "import('./server/db.js').then(m => m.openDb(process.env.DB_PATH).close())"
+    - DB_PATH=/tmp/smoke.db npm run -s backup -- /tmp/smoke-backup.db
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
