@@ -162,6 +162,8 @@
         <button data-media="📷 Photo">📷 Photo</button>
         <button data-media="🎬 Reel">🎬 Reel</button>
         <button data-media="📊 Poll">📊 Poll</button>
+        <button id="pickFile" style="flex:1 0 100%">🖼️ Gallery se photo/video</button>
+        <input id="fileIn" type="file" accept="image/*,video/*" style="display:none" />
       </div>
       <div id="mediaPick" class="note" style="margin-top:10px">Kuch chuna nahi.</div>
       <div id="pollBox" style="display:none;margin-top:10px">
@@ -639,7 +641,7 @@ $("doPost").onclick = () => {
   if (!text && !pickedMedia) return toast("Kuch likho ya media chuno");
   posts.unshift({ u:"Swag", a:"🧑", t:"abhi", ts:Date.now(), text: text || "(media post)", media: pickedMedia, likes:0 });
   LS.set("posts", posts);
-  $("postText").value = ""; pickedMedia = ""; $("mediaPick").textContent = "Kuch chuna nahi.";
+  $("postText").value = ""; pickedMedia = ""; pickedFile = null; $("mediaPick").textContent = "Kuch chuna nahi.";
   paintFeed(); paintProfile(); go("home");
   earn(5); toast("Post ho gaya · +5 coins (mehnat ka inaam)");
 };
@@ -1283,8 +1285,8 @@ function enterServerMode(user){
     const text = $("postText").value.trim();
     if (!text && !pickedMedia) return toast("Kuch likho ya media chuno");
     try{
-      const r = await api("POST", "/api/posts", { text, media:pickedMedia });
-      $("postText").value = ""; pickedMedia = ""; $("mediaPick").textContent = "Kuch chuna nahi.";
+      const r = await api("POST", "/api/posts", { text, media:pickedMedia, img: (pickedFile && pickedFile.kind === "photo") ? pickedFile.data : undefined });
+      $("postText").value = ""; pickedMedia = ""; pickedFile = null; $("mediaPick").textContent = "Kuch chuna nahi.";
       coins = r.coins;
       if (typeof loadFeed === "function") await loadFeed();   // feed turant refresh
       go("home");
@@ -1371,6 +1373,52 @@ document.addEventListener("click", (e) => {
   document.querySelectorAll("[data-media]").forEach(x => { if (x !== b) x.style.borderColor = ""; });
 });
 /* ymMediaDelegate */
+
+/* ---------- gallery se media ---------- */
+let pickedFile = null;   // { data, kind }
+function ymPickFile(){
+  const inp = $("fileIn");
+  if (!inp) return;
+  inp.value = "";
+  inp.click();
+}
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "pickFile") ymPickFile();
+});
+document.addEventListener("change", async (e) => {
+  if (!e.target || e.target.id !== "fileIn") return;
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const mp = $("mediaPick");
+  try{
+    if (f.type.startsWith("image/")){
+      // photo ko 1024px tak chhota karo (server 2MB se zyada nahi leta)
+      const data = await new Promise((res, rej) => {
+        const img = new Image();
+        img.onload = () => {
+          const sc = Math.min(1, 1024 / Math.max(img.width, img.height));
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          res(c.toDataURL("image/jpeg", 0.82));
+        };
+        img.onerror = rej;
+        img.src = URL.createObjectURL(f);
+      });
+      pickedFile = { data, kind: "photo" };
+      pickedMedia = "📷 Photo";
+      if (mp) mp.textContent = "Photo chuni: " + f.name;
+    } else if (f.type.startsWith("video/")){
+      if (f.size > 8 * 1024 * 1024){ if (mp) mp.textContent = "Video 8MB se badi hai — chhoti chuno"; return; }
+      pickedFile = { data: null, kind: "video", name: f.name };
+      pickedMedia = "🎬 Reel";
+      if (mp) mp.textContent = "Video chuni: " + f.name + " (server par video upload abhi nahi, sirf post me naam)";
+    }
+  }catch(err){
+    if (mp) mp.textContent = "File padh nahi paye — dobara try karo";
+  }
+});
+/* ymPickFile */
 
 /* ---------- bottom sheet ---------- */
 function openSheet(title, items){
