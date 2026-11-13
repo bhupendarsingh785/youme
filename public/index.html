@@ -1291,7 +1291,11 @@ function enterServerMode(user){
       if (typeof loadFeed === "function") await loadFeed();   // feed turant refresh
       go("home");
       toast("Post ho gaya" + (r.earned ? ` · +${r.earned} coins (mehnat ka inaam)` : ""));
-    }catch(e){ toast(e.message); }
+    }catch(e){
+      const mp2 = $("mediaPick");
+      if (mp2) mp2.textContent = "❌ Post nahi hua: " + (e && e.message ? e.message : "network");
+      toast(e.message);
+    }
   };
 
   $("lensShot").onclick = async () => {
@@ -1396,18 +1400,24 @@ document.addEventListener("change", async (e) => {
       const data = await new Promise((res, rej) => {
         const img = new Image();
         img.onload = () => {
-          const sc = Math.min(1, 1024 / Math.max(img.width, img.height));
-          const c = document.createElement("canvas");
-          c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-          res(c.toDataURL("image/jpeg", 0.82));
+          const make = (maxPx, q) => {
+            const sc = Math.min(1, maxPx / Math.max(img.width, img.height));
+            const c = document.createElement("canvas");
+            c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+            c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+            return c.toDataURL("image/jpeg", q);
+          };
+          let out = make(1024, 0.82);
+          if (out.length > 1_200_000) out = make(900, 0.7);
+          if (out.length > 1_200_000) out = make(700, 0.6);
+          res(out);
         };
         img.onerror = rej;
         img.src = URL.createObjectURL(f);
       });
       pickedFile = { data, kind: "photo" };
       pickedMedia = "📷 Photo";
-      if (mp) mp.textContent = "Photo chuni: " + f.name;
+      if (mp) mp.textContent = "✅ Photo taiyar (" + Math.round(data.length / 1024) + " KB) — ab Post karo";
     } else if (f.type.startsWith("video/")){
       if (f.size > 8 * 1024 * 1024){ if (mp) mp.textContent = "Video 8MB se badi hai — chhoti chuno"; return; }
       pickedFile = { data: null, kind: "video", name: f.name };
